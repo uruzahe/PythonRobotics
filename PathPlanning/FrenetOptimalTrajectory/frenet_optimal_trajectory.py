@@ -14,6 +14,10 @@ Ref:
 
 """
 
+# ----- Begin My Code -----
+from func import point2func
+# ----- End My Code -----
+
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
@@ -40,7 +44,7 @@ MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 1.0  # maximum curvature [1/m]
 MAX_ROAD_WIDTH = 7.0  # maximum road width [m]
 D_ROAD_W = 1.0  # road width sampling length [m]
-DT = 0.2  # time tick [s]
+DT = 0.1  # time tick [s]
 MAX_T = 5.0  # max prediction time [m]
 MIN_T = 4.0  # min prediction time [m]
 TARGET_SPEED = 30.0 / 3.6  # target speed [m/s]
@@ -291,6 +295,10 @@ def main():
         path = frenet_optimal_planning(
             csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
 
+        # ----- Brgin My Code -----
+        print(path.__dict__)
+        print(point2func(path.t, path.x, path.y))
+        # ----- End My Code -----
         s0 = path.s[1]
         c_d = path.d[1]
         c_d_d = path.d_d[1]
