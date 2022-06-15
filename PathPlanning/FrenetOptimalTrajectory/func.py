@@ -39,4 +39,12 @@ def point2func(t_l, x_l, y_l, dim=10):
     print(" ----- grand truth -----")
     print(point_matrix.T)
 
-    return ans
+    d_x = re_ans.T[0] - point_matrix.T[0]
+    d_y = re_ans.T[1] - point_matrix.T[1]
+
+    print(" ----- diff -----")
+    print(d_x)
+    print(d_y)
+    diff_x_max = max([math.fabs(d) for d in d_x])
+    diff_y_max = max([math.fabs(d) for d in d_y])
+    return ans, diff_x_max, diff_y_max
