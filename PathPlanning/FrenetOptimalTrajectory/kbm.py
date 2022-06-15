@@ -263,4 +263,7 @@ if __name__ == "__main__":
     file_name = "_".join([f"{k}_{v}" for k, v in args.__dict__.items()])
     plt.scatter(x, y, c="black", label="grand truth")
     plt.scatter(ans_x, ans_y, c="orange", label="estimate")
+    plt.legend()
+    plt.xlabel("x (m)")
+    plt.ylabel("y (m)")
     fig.savefig(f"path_img/{file_name}.png")
