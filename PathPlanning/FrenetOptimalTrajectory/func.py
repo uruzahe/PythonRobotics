@@ -28,8 +28,8 @@ def point2func(t_l, x_l, y_l, dim=10):
         origin_time_matrix.append(tmp)
 
     time_matrix = np.array(origin_time_matrix)
-    print("----- time_matrix -----")
-    print(time_matrix)
+    # print("----- time_matrix -----")
+    # print(time_matrix)
 
     ans = np.dot(np.linalg.pinv(time_matrix), point_matrix)
 

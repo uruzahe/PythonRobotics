@@ -264,29 +264,8 @@ class Car:
         theta_init = self.theta_log[-1]
         target_theta = self.theta_log[-1] + rotate_radian
         origin_stear = arctan((target_theta - self.theta_log[-1]) * (self.veh_length / (self.v_log[-1] * self.d_t)))
-        # origin_stear_pivot = arctan((target_theta - self.theta_log[-1]) * (self.veh_length / (self.v_log[-1] * self.d_t))) / 10.0
-        #
-        # stear = clip(
-        #     clip(
-        #         origin_stear,
-        #         self.s_log[-1] - self.sv_max * self.d_t,
-        #         self.s_log[-1] + self.sv_max * self.d_t
-        #     ),
-        #     -1 * self.s_max,
-        #     self.s_max
-        # )
-        #
-        # stear_pivot = clip(
-        #     clip(
-        #         origin_stear,
-        #         self.s_log[-1] - self.sv_max * self.d_t,
-        #         self.s_log[-1] + self.sv_max * self.d_t
-        #     ),
-        #     -1 * self.s_max,
-        #     self.s_max
-        # )
 
-
+        print(f"origin_stear: {origin_stear}, sv_max: {self.sv_max}")
         if -self.sv_max * self.d_t <= origin_stear and origin_stear <= self.sv_max * self.d_t:
             self.generate_path_by_delta_t(self.d_t, acc, origin_stear)
             self.generate_path_by_delta_t(self.d_t, acc, 0)
@@ -316,22 +295,28 @@ class Car:
                 self.veh_length,
             )
 
-            # _, _, _, theta_next_low = kbm(
-            #     self.x_log[-1],
-            #     self.y_log[-1],
-            #     self.v_log[-1],
-            #     self.theta_log[-1],
-            #     acc,
-            #     self.s_log[-1] - self.sv_max * self.d_t,
-            #     self.d_t,
-            #     self.veh_length,
-            # )
+            _, _, _, theta_next_low = kbm(
+                self.x_log[-1],
+                self.y_log[-1],
+                self.v_log[-1],
+                self.theta_log[-1],
+                acc,
+                self.s_log[-1] - self.sv_max * self.d_t,
+                self.d_t,
+                self.veh_length,
+            )
 
-        print(f"theta_next_high: {theta_next_high}, theta_next_midle: {theta_next_midle}, target_theta: {target_theta}, rotate_radian: {rotate_radian}")
-        if theta_next_high <= self.theta_log[-1] + rotate_radian / 3.0:
+        print(f"target_theta: {target_theta}, stear: {self.s_log[-1]}, theta: {self.theta_log[-1]}, rotate_radian: {rotate_radian}")
+        print(f"theta_next_high: {theta_next_high}, theta_next_midle: {theta_next_midle}, theta_next_low: {theta_next_low}")
+
+        n = 1
+        if self.s_log[-1] != 0:
+            n = self.s_log[-1] / (self.d_t * self.d_t)
+            
+        if theta_next_high <= self.theta_log[-1] + rotate_radian / n:
             self.generate_path_by_delta_t(self.d_t, acc, self.s_log[-1] + self.sv_max * self.d_t)
 
-        elif theta_next_midle <= self.theta_log[-1] + rotate_radian / 3.0:
+        elif theta_next_midle <= self.theta_log[-1] + rotate_radian / n:
             self.generate_path_by_delta_t(self.d_t, acc, self.s_log[-1])
 
         else:
@@ -360,6 +345,8 @@ if __name__ == "__main__":
     parser.add_argument('-aui', '--a_update_interval', type=float, default=100)
     parser.add_argument('-sui', '--stear_update_interval', type=float, default=100)
     parser.add_argument('-rui', '--rotate_update_interval', type=float, default=100)
+    parser.add_argument('-rv', '--rotate_value', type=float, default=90)
+    parser.add_argument('-rt', '--rotate_type', action='store_true')
     parser.add_argument('-dim', type=int, default=20)
 
 
@@ -381,6 +368,7 @@ if __name__ == "__main__":
     a_update_time = car.latest_time() + args.a_update_interval
     stear_update_time = car.latest_time() + args.stear_update_interval
     rotate_update_time = car.latest_time() + args.rotate_update_interval
+    rotate_type = 1
     while car.latest_time() <= args.end:
         # ----- generate acc randomly -----
         if a_update_time <= car.latest_time() and args.a_update_interval != 0:
@@ -394,9 +382,12 @@ if __name__ == "__main__":
 
         # ----- generate stear randomly -----
         if rotate_update_time <= car.latest_time() and args.rotate_update_interval != 0:
-            rotate_radian = math.radians(90)
-            rotate_update_time = car.latest_time() + args.rotate_update_interval + 100
+            rotate_radian = math.radians(rotate_type * args.rotate_value)
             car.generate_path_by_rotate(0, rotate_radian)
+            rotate_update_time = car.latest_time() + args.rotate_update_interval
+
+            if args.rotate_type == True:
+                rotate_type = -1 * rotate_type
 
         else:
             car.generate_path_by_delta_t(args.dt, a, stear)
