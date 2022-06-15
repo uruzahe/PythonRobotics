@@ -6,6 +6,8 @@ import random
 import argparse
 import math
 
+import matplotlib.pyplot as plt
+
 from func import point2func
 
 def clip(v, v_min, v_max):
@@ -200,7 +202,7 @@ if __name__ == "__main__":
     parser.add_argument('-aui', '--a_update_interval', type=float, default=100)
     parser.add_argument('-sui', '--stear_update_interval', type=float, default=100)
     parser.add_argument('-rui', '--rotate_update_interval', type=float, default=100)
-    parser.add_argument('-rv', '--rotate_value', type=float, default=90)
+    parser.add_argument('-rv', '--rotate_value', type=float, default=0)
     parser.add_argument('-rt', '--rotate_type', action='store_true')
     parser.add_argument('-dim', type=int, default=20)
 
@@ -253,6 +255,12 @@ if __name__ == "__main__":
     # print(y)
     # print(t)
 
-    _, diff_x_max, diff_y_max, diff_max = point2func(t, x, y, args.dim)
+    _, diff_x_max, diff_y_max, diff_max, ans_x, ans_y = point2func(t, x, y, args.dim)
     # print('{:.20f}, {:.20f}, {:}'.format(diff_x_max, diff_y_max, args.__dict__))
     print('{:.20f}, {:}'.format(diff_max, args.__dict__))
+
+    fig = plt.figure()
+    file_name = "_".join([f"{k}_{v}" for k, v in args.__dict__.items()])
+    plt.scatter(x, y, c="black", label="grand truth")
+    plt.scatter(ans_x, ans_y, c="orange", label="estimate")
+    fig.savefig(f"path_img/{file_name}.png")

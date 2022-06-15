@@ -48,4 +48,4 @@ def point2func(t_l, x_l, y_l, dim=10):
     diff_x_max = max([math.fabs(d) for d in d_x])
     diff_y_max = max([math.fabs(d) for d in d_y])
     diff_max = max([math.sqrt(d_x[i] * d_x[i] + d_y[i] * d_y[i]) for i in range(0, len(d_x))])
-    return ans, diff_x_max, diff_y_max, diff_max
+    return ans, diff_x_max, diff_y_max, diff_max, list(re_ans.T[0]), list(re_ans.T[1])

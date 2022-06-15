@@ -13,8 +13,11 @@ do
   do
     for RV in `seq 10 10 60`
     do
-      STDOUT=$(python3 kbm.py -vi $VI -dim $DIM -rui 0.5 -rv $RV -rt)
-      echo "$RV deg S corner, $VI, $DIM, $STDOUT"
+      for RUI in `seq 0.1 0.1 0.5`
+      do
+        STDOUT=$(python3 kbm.py -vi $VI -dim $DIM -rui $RUI -rv $RV -rt)
+        echo "$RV deg S corner, $VI, $DIM, $RUI, $STDOUT"
+      done
     done
   done
 done
