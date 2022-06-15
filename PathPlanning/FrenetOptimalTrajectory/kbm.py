@@ -263,7 +263,7 @@ class Car:
     def generate_path_by_rotate(self, acc, rotate_radian):
         theta_init = self.theta_log[-1]
         target_theta = self.theta_log[-1] + rotate_radian
-        # origin_stear = arctan((target_theta - self.theta_log[-1]) * (self.veh_length / (self.v_log[-1] * self.d_t))) / 10.0
+        origin_stear = arctan((target_theta - self.theta_log[-1]) * (self.veh_length / (self.v_log[-1] * self.d_t)))
         # origin_stear_pivot = arctan((target_theta - self.theta_log[-1]) * (self.veh_length / (self.v_log[-1] * self.d_t))) / 10.0
         #
         # stear = clip(
@@ -286,30 +286,59 @@ class Car:
         #     self.s_max
         # )
 
-        _, _, _, theta_next = kbm(
-            self.x_log[-1],
-            self.y_log[-1],
-            self.v_log[-1],
-            self.theta_log[-1],
-            acc,
-            stear + + self.sv_max * self.d_t,
-            d_t,
-            self.veh_length,
-        )
 
-        if 2 * theta_next <= self.sv_max * self.d_t
-
-        print(f"stear: {stear}, origin_stear: {origin_stear}, stear_pivot: {stear_pivot}, target_theta: {target_theta}")
-        if stear != origin_stear:
-            print("!!!!!")
-            self.generate_path_by_delta_t(self.d_t, acc, stear_pivot)
-
-            return self.generate_path_by_rotate(acc, rotate_radian - (self.theta_log[-1] - self.theta_log[-2]))
-
-        else:
-            self.generate_path_by_delta_t(self.d_t, acc, stear)
+        if -self.sv_max * self.d_t <= origin_stear and origin_stear <= self.sv_max * self.d_t:
+            self.generate_path_by_delta_t(self.d_t, acc, origin_stear)
+            self.generate_path_by_delta_t(self.d_t, acc, 0)
 
             return 0
+
+        else:
+            _, _, _, theta_next_high = kbm(
+                self.x_log[-1],
+                self.y_log[-1],
+                self.v_log[-1],
+                self.theta_log[-1],
+                acc,
+                self.s_log[-1] + self.sv_max * self.d_t,
+                self.d_t,
+                self.veh_length,
+            )
+
+            _, _, _, theta_next_midle = kbm(
+                self.x_log[-1],
+                self.y_log[-1],
+                self.v_log[-1],
+                self.theta_log[-1],
+                acc,
+                self.s_log[-1],
+                self.d_t,
+                self.veh_length,
+            )
+
+            # _, _, _, theta_next_low = kbm(
+            #     self.x_log[-1],
+            #     self.y_log[-1],
+            #     self.v_log[-1],
+            #     self.theta_log[-1],
+            #     acc,
+            #     self.s_log[-1] - self.sv_max * self.d_t,
+            #     self.d_t,
+            #     self.veh_length,
+            # )
+
+        print(f"theta_next_high: {theta_next_high}, theta_next_midle: {theta_next_midle}, target_theta: {target_theta}, rotate_radian: {rotate_radian}")
+        if theta_next_high <= self.theta_log[-1] + rotate_radian / 3.0:
+            self.generate_path_by_delta_t(self.d_t, acc, self.s_log[-1] + self.sv_max * self.d_t)
+
+        elif theta_next_midle <= self.theta_log[-1] + rotate_radian / 3.0:
+            self.generate_path_by_delta_t(self.d_t, acc, self.s_log[-1])
+
+        else:
+            self.generate_path_by_delta_t(self.d_t, acc, self.s_log[-1] - self.sv_max * self.d_t)
+
+        return self.generate_path_by_rotate(acc, rotate_radian - (self.theta_log[-1] - self.theta_log[-2]))
+
 
     def generate_path_until_time(self, T, acc, stear):
         while self.latest_time() <= T:
