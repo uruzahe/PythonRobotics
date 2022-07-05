@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 水  6/29 14:42:10 2022 by Eclipse SUMO netedit Version 1.3.1
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <processing>
+        <offset.disable-normalization value="true"/>
+    </processing>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+    </junctions>
+
+</configuration>
+-->
+
+<net version="1.3" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="-4.81,65.32,42.87,81.08" origBoundary="10000000000.00,10000000000.00,-10000000000.00,-10000000000.00" projParameter="!"/>
+
+    <edge id="gneE1" from="gneJ2" to="gneJ1" priority="-1" shape="-4.81,81.08 -4.44,78.35 -3.50,75.88 -2.05,73.67 -0.15,71.72 2.15,70.03 4.77,68.60 7.66,67.43 9.19,66.94 10.76,66.52 12.38,66.16 14.02,65.86 15.68,65.63 17.36,65.46 19.04,65.36 20.73,65.32 22.41,65.35 24.07,65.44 25.71,65.59 27.32,65.81 30.42,66.44 33.31,67.33 35.93,68.47 38.22,69.86 40.12,71.51 41.56,73.42 42.50,75.58 42.87,77.99">
+        <lane id="gneE1_0" index="0" speed="13.89" length="65.64" shape="-6.40,80.87 -6.00,77.95 -4.93,75.15 -3.30,72.66 -1.20,70.51 1.29,68.68 4.08,67.15 7.12,65.92 8.74,65.40 10.38,64.97 12.06,64.59 13.77,64.28 15.49,64.04 17.23,63.87 18.97,63.76 20.73,63.72 22.47,63.75 24.19,63.84 25.89,64.00 27.59,64.23 30.82,64.89 33.87,65.83 36.67,67.05 39.17,68.56 41.30,70.41 42.95,72.61 44.05,75.13 44.45,77.75"/>
+    </edge>
+
+    <junction id="gneJ1" type="dead_end" x="42.87" y="77.99" incLanes="gneE1_0" intLanes="" shape="46.03,77.51 42.87,77.99"/>
+    <junction id="gneJ2" type="dead_end" x="-4.81" y="81.08" incLanes="" intLanes="" shape="-4.81,81.08 -7.98,80.65"/>
+
+</net>

@@ -296,10 +296,11 @@ def main():
             csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
 
         # ----- Brgin My Code -----
-        print(path.__dict__)
-        print(point2func(path.t, path.x, path.y))
+        # print(path.__dict__)
+        # print(point2func(path.t, path.x, path.y))
         # ----- End My Code -----
         s0 = path.s[1]
+        print(f"s: {s0}")
         c_d = path.d[1]
         c_d_d = path.d_d[1]
         c_d_dd = path.d_dd[1]

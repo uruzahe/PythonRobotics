@@ -1,0 +1,11 @@
+
+<configuration>
+    <input>
+        <net-file value="1_1merging.net.xml"/>
+        <route-files value="1_1merging.trip.xml"/>
+    </input>
+    <time>
+        <begin value="0"/>
+        <end value="10000"/>
+    </time>
+</configuration>
