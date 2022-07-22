@@ -35,8 +35,13 @@ class Path:
         v = self.vec(tl[index], vl[index], tl[index - 1], vl[index - 1], target_t)
         a = self.vec(tl[index], al[index], tl[index - 1], al[index - 1], target_t)
         vec = pl[index] - pl[index - 1]
-        angle = math.atan(vec[1]/vec[0])
+        angle = 0
+        if vec[0] == 0:
+            angle = 0
+        else:
+            angle = math.atan(vec[1]/vec[0])
         progress = index / (len(pl) - 1)
+        # print(f"vec: {vec}")
 
         return angle, p, v, a, progress
 
@@ -96,7 +101,7 @@ class CarObstacle(Obstacle):
         self.width = width
         self.length = length
         self.path = None
-
+        # assert(np.isnan(self.heading) is False)
         if path is not None:
             self.path = path
             # # print(path)
@@ -123,36 +128,31 @@ class CarObstacle(Obstacle):
         return self.position_to_shapes(self.pos(t), self.heading, self.width, self.length)
 
     def check_collision(self, obstacle_obj, t):
-        self_p = self.pos(t)
 
-        if self.length < math.dist(self_p, obstacle_obj.pos(t)):
-            return False
-
-
-        a, b, c, d = self.corners(self_p, self.heading, self.width, self.length)
-        print(f"{sys._getframe().f_code.co_name}, pos: {self_p}, a: {a}, b: {b}, c: {c}, d: {d}")
-        for p in obstacle_obj.positions():
-            pa_vec = np.array(a) - np.array(p)
-            pb_vec = np.array(b) - np.array(p)
-            pc_vec = np.array(c) - np.array(p)
-            pd_vec = np.array(d) - np.array(p)
-
-            sum_rads = sum([
-                rad_by_points(pa_vec, pb_vec),
-                rad_by_points(pb_vec, pc_vec),
-                rad_by_points(pc_vec, pd_vec),
-                rad_by_points(pd_vec, pa_vec)
-            ])
-
-            if (math.fabs(sum_rads - 0) < math.fabs(sum_rads - 2 * math.pi)):
-                # ----- collide -----
+        for ob_c in obstacle_obj.corners(obstacle_obj.pos(t), obstacle_obj.heading, obstacle_obj.width, obstacle_obj.length):
+            if any([ math.dist(ob_c, self_c) <= 0.5 for self_c in self.corners(self.pos(t), self.heading, self.width, self.length) ]):
                 return True
 
-            else:
-                # ----- no collide -----
-                continue
-
         return False
+
+        # self_p = self.pos(t)
+
+        # if self.length < math.dist(self_p, obstacle_obj.pos(t)):
+        #     return False
+
+        # print(f"{sys._getframe().f_code.co_name}, t: {t}, id: {self.id}, ob_id: {obstacle_obj.id}, pos: {self_p}, ob_pos: {obstacle_obj.pos(t)}, a: {a}, b: {b}, c: {c}, d: {d}")
+        # print(obstacle_obj.positions(t))
+        # for p in obstacle_obj.positions(t):
+        #     if is_collide(a, b, c, d, p):
+        #         print(f"collision point: {p}")
+        #         # ----- collide -----
+        #         return True
+        #
+        #     else:
+        #         # ----- no collide -----
+        #         continue
+        #
+        # return False
 
     def corners(self, position, heading, width, length):
         # # print(heading)
@@ -171,6 +171,8 @@ class CarObstacle(Obstacle):
         c = np.array(position) + np.dot(R, np.array([-length, -width/2.0, position[2]]))
         d = np.array(position) + np.dot(R, np.array([0, -width/2.0, position[2]]))
 
+        # print(f"id: {self.id}, R: {R}, width: {width}, length: {length}, pos: {position}, a: {a}, b: {b}, c: {c}, d: {d}, rad: {rad}, heading: {heading}")
+        # assert(np.isnan(rad) is False)
         return a, b, c, d
 
     def position_to_shapes(self, position, heading, width, length):

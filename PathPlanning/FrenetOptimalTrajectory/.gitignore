@@ -1,2 +1,5 @@
 path_img/*
 !path_img/.gitkeep
+
+result/*
+!result/.gitkeep

@@ -1,5 +1,6 @@
 import sys
 import os
+import pprint
 
 import copy
 
@@ -26,6 +27,7 @@ class FrenetOptimalTrajectry:
         self.waypoints = waypoints
         self.waypoints_x = [d[0] for d in waypoints]
         self.waypoints_y = [d[1] for d in waypoints]
+        # print(f"waypoints_y: {self.waypoints_y}")
         self.csp = self.__csp(self.waypoints_x, self.waypoints_y)
         # self.road_width_list = road_width_list
 
@@ -131,14 +133,14 @@ class FrenetOptimalTrajectry:
         csp = self.csp
 
         for fp in fplist:
-            print(f"\n ----- {sys._getframe().f_code.co_name}")
-            print(f"{sys._getframe().f_code.co_name}, fp.s: {fp.s}")
-            print(f"{sys._getframe().f_code.co_name}, fp.s_d: {fp.s_d}")
-            print(f"{sys._getframe().f_code.co_name}, fp.s_dd: {fp.s_dd}")
+            # print(f"\n ----- {sys._getframe().f_code.co_name}")
+            # print(f"{sys._getframe().f_code.co_name}, fp.s: {fp.s}")
+            # print(f"{sys._getframe().f_code.co_name}, fp.s_d: {fp.s_d}")
+            # print(f"{sys._getframe().f_code.co_name}, fp.s_dd: {fp.s_dd}")
             for i in range(len(fp.s)):
                 ix, iy = csp.calc_position(fp.s[i])
-                if ix is None:
-                    print(f"{sys._getframe().f_code.co_name}, i: {i}")
+                if ix is None or math.isnan(ix):
+                    print(f"{sys._getframe().f_code.co_name}, i: {i}, s: {fp.s[i]}")
                     break
                 i_yaw = csp.calc_yaw(fp.s[i])
                 di = fp.d[i]
@@ -163,8 +165,12 @@ class FrenetOptimalTrajectry:
 
             # calc curvature
             for i in range(len(fp.yaw) - 1):
-                fp.c.append((fp.yaw[i + 1] - fp.yaw[i]) / fp.ds[i])
+                if fp.ds[i] == 0:
+                    fp.c.append(0)
+                else:
+                    fp.c.append((fp.yaw[i + 1] - fp.yaw[i]) / fp.ds[i])
 
+            # print(fp.__dict__)
         return fplist
 
 

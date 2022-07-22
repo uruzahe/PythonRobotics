@@ -1,0 +1,11 @@
+
+<configuration>
+    <input>
+        <net-file value="narrow_road.net.xml"/>
+<route-files value="narrow_road.trip.xml"/>
+    </input>
+    <time>
+        <begin value="0"/>
+        <end value="10000"/>
+    </time>
+</configuration>

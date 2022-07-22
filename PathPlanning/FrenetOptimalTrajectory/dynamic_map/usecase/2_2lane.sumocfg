@@ -1,0 +1,11 @@
+
+<configuration>
+    <input>
+        <net-file value="2_2lane.net.xml"/>
+        <route-files value="2_2lane.trip.xml"/>
+    </input>
+    <time>
+        <begin value="0"/>
+        <end value="10000"/>
+    </time>
+</configuration>
