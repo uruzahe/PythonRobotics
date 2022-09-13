@@ -6,7 +6,7 @@ from .obstacles import *
 
 
 class CAV:
-    def __init__(self, id, net_file_path, edges, c_speed, c_acc, road_width_list, state_update_interval, width, length, heading, default_speed_mode, default_lane_mode):
+    def __init__(self, id, net_file_path, edges, c_speed, c_acc, road_width_list, state_update_interval, width, length, heading, default_speed_mode, default_lane_mode, default_tau):
         self.id = id
         self.dynamic_map = DynamicMap(net_file_path)
         self.path_planner = None
@@ -21,6 +21,7 @@ class CAV:
         self.heading = heading
         self.default_speed_mode = default_speed_mode
         self.default_lane_mode = default_lane_mode
+        self.default_tau = default_tau
 
     # def waypoints_by_edges(self, edges):
     #     return self.dynamic_map.waypoints_by_edges(edges)
@@ -211,12 +212,13 @@ class CAV:
                     continue
 
                 print(f"----- follow id: {acc_veh.id}, ts: {ts}, speed: {vl}, accel: {al} -----")
-                ts = ts + vl * dT + al * (dT**2) /2 - ACC_l(c_speed, acc_veh.length)
+                new_ts = ts + vl * dT + al * (dT**2) /2 - ACC_l(c_speed, acc_veh.length)
                 tv = middle_val(vl + al * dT, 0, max_speed)
+                print(f"----- follow id: {acc_veh.id}, ts: {ts}, new_ts: {new_ts}, speed: {vl}, accel: {al} -----")
                 new_path = self.path_planner.frenet_path(
                     dT,
                     td,
-                    ts,
+                    new_ts,
                     tv,
                     al
                 )

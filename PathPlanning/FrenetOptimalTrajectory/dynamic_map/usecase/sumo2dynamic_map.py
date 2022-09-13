@@ -145,11 +145,13 @@ if __name__ == "__main__":
                     length=traci.vehicle.getLength(id),
                     heading=angle,
                     default_speed_mode=traci.vehicle.getSpeedMode(id),
-                    default_lane_mode=traci.vehicle.getLaneChangeMode(id)
+                    default_lane_mode=traci.vehicle.getLaneChangeMode(id),
+                    default_tau=traci.vehicle.getTau(id)
                 )
                 # ----- tips: initial setting -----
                 traci.vehicle.setSpeedMode(id, 0)
                 traci.vehicle.setLaneChangeMode(id, 0)
+                traci.vehicle.setTau(id, 0)
 
             cav = id2cavs[id]
             cav.clear_obstacle()
@@ -292,6 +294,7 @@ if __name__ == "__main__":
                         traci.vehicle.setSpeedMode(id, cav.default_speed_mode)
                         traci.vehicle.setLaneChangeMode(id, cav.default_lane_mode)
                         traci.vehicle.setSpeed(id, -1)
+                        traci.vehicle.setTau(id, cav.default_tau)
                         id2cavs.pop(id)
                         veh_ids.remove(id)
                 else:

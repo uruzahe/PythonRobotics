@@ -1,4 +1,4 @@
-echo "acc, speed, rotate_update_interval, point,  angle_init, rotate_angle, maxdim, prop_size, etsi_size, time, file_name"
+echo "acc, speed, rotate_update_interval, point,  duration, angle_init, rotate_angle, maxdim, prop_size, etsi_size, time, file_name"
 # echo "$AI, $VI,   $RUI,                   $NP,    $TI,        $RV,          $STDOUT"
 # ----- all paterns -----
 # for DIM in "5" "10" "15"
@@ -41,8 +41,8 @@ do
             for TI in "0" "45" "90"
             do
               STDOUT=$(python3 kbm.py -ai $AI -vi $VI -rui $RUI -rv $RV --np $NP -ti $TI -maxdim $MDIM -rt )
-              # echo "acc, speed, rotate_update_interval, point,  angle_init, rotate_angle, maxdim, prop_size, etsi_size, time, file_name"
-              echo  "$AI, $VI,   $RUI,                   $NP,    $TI,        $RV,          $MDIM,   $STDOUT"
+              # echo "acc, speed, rotate_update_interval, point,  duration,     angle_init, rotate_angle, maxdim, prop_size, etsi_size, time, file_name"
+              echo  "$AI, $VI,   $RUI,                   $NP,     $(($NP/10)),         $TI,        $RV,          $MDIM,   $STDOUT"
             done
           done
         done

@@ -7,10 +7,41 @@ import argparse
 import math
 import json
 import time
+import struct
 
 import matplotlib.pyplot as plt
+from multiprocessing import Pool
 
 from func import point2func
+
+plt.rcParams["font.size"] = 18
+
+class MCM:
+    def __init__(self, x, y, z, t):
+        assert(len(x) == len(y))
+        assert(len(y) == len(z))
+        assert(len(z) == len(t))
+
+        self.x = x
+        self.y = y
+        self.z = z
+        self.t = t
+
+    def size(self):
+        return 9 * len(t)
+
+    def bit_str(self):
+        result = ''
+
+        for i in range(0, len(self.t)):
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.t[i])[::-1]])
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.x[i])[::-1]])[0:24]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.y[i])[::-1]])[0:24]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.z[i])[::-1]])[0:16]
+
+        return result
+
+
 
 def multi_container(t, x, max_dim, error_th):
     efficiency = -10
@@ -96,6 +127,12 @@ def multi_container(t, x, max_dim, error_th):
         # print(f"last: {point}, {len(t[(point):])}")
         return [result] + multi_container(t[(point):], x[(point):], max_dim, error_th)
 
+
+def multi_container_wrapper(input):
+    t, x, max_dim, error_th = input
+
+    return multi_container(t, x, max_dim, error_th)
+
 def clip(v, v_min, v_max):
     if v < v_min:
         return v_min
@@ -114,7 +151,7 @@ def kbm(x_c, y_c, v_c, theta_c, acc, stear, d_t, veh_length):
     v_next = clip(v_c + acc * d_t, 0, float('inf'))
     theta_next = theta_c + v_c * (tan(stear) / veh_length) * d_t
 
-    # print(f"x: {x_next}, y: {y_next}, v: {v_next}, theta: {math.degrees(theta_next)}")
+    # print(f"x: {x_next}, y: {y_next}, v: {v_next}, acc: {acc}, theta: {math.degrees(theta_next)}")
     return x_next, y_next, v_next, theta_next
 
 class Car:
@@ -163,9 +200,9 @@ class Car:
         theta_r = [self.theta_log[0]]
 
         for i in range(0, len(self.t_log)):
-            dt = self.t_log[i] - t_r[-1]
-            dv = self.v_log[i] - v_r[-1]
-            dh = self.theta_log[i] - theta_r[-1]
+            dt = math.fabs(self.t_log[i] - t_r[-1])
+            dv = math.fabs(self.v_log[i] - v_r[-1])
+            dh = math.fabs(math.degrees(self.theta_log[i]) - math.degrees(theta_r[-1]))
             # print(self.x_log[i])
             # print(self.y_log[i])
             # print(np.array([float(self.x_log[i]), float(self.y_log[i])]))
@@ -176,10 +213,12 @@ class Car:
 
             if 0.1 <= self.t_log[i] - t_r[-1]:
                 if 1.0 <= dt or 0.5 <= dv or 4 <= dh or 4 <= dd:
+                    # print(f"{dt}, {dv}, {dh}, {dd}")
                     x_r.append(self.x_log[i])
                     y_r.append(self.y_log[i])
                     t_r.append(self.t_log[i])
                     v_r.append(self.v_log[i])
+                    theta_r.append(self.theta_log[i])
 
         return x_r, y_r, t_r
 
@@ -204,12 +243,16 @@ class Car:
         self.theta_log.append(theta_next)
         self.t_log.append(self.latest_time() + d_t)
         self.s_log.append(stear)
+        # print(self.t_log)
 
 
-    def generate_path_by_rotate(self, acc, rotate_radian):
+    def generate_path_by_rotate(self, acc, rotate_radian, force_stop_time=float("inf")):
         theta_init = self.theta_log[-1]
         target_theta = self.theta_log[-1] + rotate_radian
         origin_stear = arctan((target_theta - self.theta_log[-1]) * (self.veh_length / (self.v_log[-1] * self.d_t)))
+
+        if force_stop_time <= self.t_log[-1] + self.d_t:
+            return 0
 
         # print(f"origin_stear: {origin_stear}, sv_max: {self.sv_max}")
         if -self.sv_max * self.d_t <= origin_stear and origin_stear <= self.sv_max * self.d_t:
@@ -268,7 +311,7 @@ class Car:
         else:
             self.generate_path_by_delta_t(self.d_t, acc, clip(self.s_log[-1] - self.sv_max * self.d_t, -self.s_max, self.s_max))
 
-        return self.generate_path_by_rotate(acc, rotate_radian - (self.theta_log[-1] - self.theta_log[-2]))
+        return self.generate_path_by_rotate(acc, rotate_radian - (self.theta_log[-1] - self.theta_log[-2]), force_stop_time)
 
 
     def generate_path_until_time(self, T, acc, stear):
@@ -319,7 +362,9 @@ if __name__ == "__main__":
     stear_update_time = car.latest_time() + args.stear_update_interval
     rotate_update_time = car.latest_time() + args.rotate_update_interval
     rotate_type = 1
-    while car.latest_time() <= args.np * args.dt:
+    force_stop_time = args.np * args.dt
+
+    while car.latest_time() + args.d_dt <= force_stop_time:
         # ----- generate acc randomly -----
         if a_update_time <= car.latest_time() and args.a_update_interval != 0:
             a_update_time = car.latest_time() + args.a_update_interval
@@ -333,7 +378,7 @@ if __name__ == "__main__":
         # ----- generate stear randomly -----
         if rotate_update_time <= car.latest_time() and args.rotate_update_interval != 0 and args.rotate_value != 0:
             rotate_radian = math.radians(rotate_type * args.rotate_value)
-            car.generate_path_by_rotate(0, rotate_radian)
+            car.generate_path_by_rotate(a, rotate_radian, force_stop_time)
             # rotate_update_time = car.latest_time() + args.rotate_update_interval
             rotate_update_time = max([car.latest_time(), rotate_update_time + args.rotate_update_interval])
 
@@ -391,10 +436,29 @@ if __name__ == "__main__":
     # fig.savefig(f"path_img/{file_name}_y.png")
 
     file_name = "_".join([f"{k}_{v}" for k, v in args.__dict__.items()])
+    # args = [
+    #     (t[:], x[:], args.maxdim, math.sqrt(args.error_th/3)),
+    #     (t[:], y[:], args.maxdim, math.sqrt(args.error_th/3)),
+    #     (t[:], [0] * len(t), args.maxdim, math.sqrt(args.error_th/3)),
+    # ]
+
+    # ----- proposed -----
+    acceptance_error = args.error_th / math.sqrt(3.0)
     start_time = time.perf_counter()
-    res_x = multi_container(t[:], x[:], args.maxdim, math.sqrt(args.error_th/3))
-    res_y = multi_container(t[:], y[:], args.maxdim, math.sqrt(args.error_th/3))
-    res_z = multi_container(t[:], [0] * len(t), args.maxdim, math.sqrt(args.error_th/3))
+    z = [0] * len(t)
+    res_x = multi_container(t[:], x[:], args.maxdim, acceptance_error)
+    res_y = multi_container(t[:], y[:], args.maxdim, acceptance_error)
+    res_z = multi_container(t[:], z[:], args.maxdim, acceptance_error)
+
+    # ----- previous 1 -----
+    mcm = MCM(x, y, z, t)
+    print(mcm.bit_str())
+
+    # res = Pool(3).map(multi_container_wrapper, args)  # マルチプロセスの実行
+    # # print(res)  # 各プロセスで実行した関数の戻り値がリストで返ってくる
+    # res_x = res[0]
+    # res_y = res[1]
+    # res_z = res[2]
     take_time = time.perf_counter() - start_time
 
     # print(res_x)
@@ -425,31 +489,34 @@ if __name__ == "__main__":
     # print([d["efficient_dim"] for d in res_y])
     colors = ["orange", "green"]
 
-    fig = plt.figure()
-    plt.scatter(x, y, c="black", label="grand truth")
-    plt.scatter(ans_x, ans_y, c="orange", label="estimate")
+    # fig = plt.figure()
+    fig = plt.figure(figsize=(8,6))
+    plt.scatter(x, y, c="black", label="original waypoint")
+    plt.scatter(ans_x, ans_y, c="orange", label="approximated waypoint")
     plt.legend()
     plt.xlabel("x (m)")
     plt.ylabel("y (m)")
-    fig.savefig(f"path_img/{file_name}.pdf")
+    fig.savefig(f"path_img/{file_name}.pdf", transparent=True)
 
-    fig = plt.figure()
-    plt.scatter(t, x, c="black", label="grand truth")
-    plt.scatter(t, ans_x, c="orange", label="estimate")
+    # fig = plt.figure()
+    fig = plt.figure(figsize=(8,6))
+    plt.scatter(t, x, c="black", label="original waypoint")
+    plt.scatter(t, ans_x, c="orange", label="approximated waypoint")
     plt.scatter(start_time_x, start_point_x, c="green", label="start point of polynomial")
     plt.legend()
-    plt.xlabel("t (sec)")
+    plt.xlabel("passing time (sec)")
     plt.ylabel("x (m)")
-    fig.savefig(f"path_img/{file_name}_x.pdf")
+    fig.savefig(f"path_img/{file_name}_x.pdf", transparent=True)
 
-    fig = plt.figure()
-    plt.scatter(t, y, c="black", label="grand truth")
-    plt.scatter(t, ans_y, c="orange", label="estimate")
+    # fig = plt.figure()
+    fig = plt.figure(figsize=(8,6))
+    plt.scatter(t, y, c="black", label="original waypoint")
+    plt.scatter(t, ans_y, c="orange", label="approximated waypoint")
     plt.scatter(start_time_y, start_point_y, c="green", label="start point of polynomial")
     plt.legend()
-    plt.xlabel("t (sec)")
+    plt.xlabel("passing time (sec)")
     plt.ylabel("y (m)")
-    fig.savefig(f"path_img/{file_name}_y.pdf")
+    fig.savefig(f"path_img/{file_name}_y.pdf", transparent=True)
 
     etsi_x, etsi_y, etsi_t = car.path_filterd_by_ETSI()
 
