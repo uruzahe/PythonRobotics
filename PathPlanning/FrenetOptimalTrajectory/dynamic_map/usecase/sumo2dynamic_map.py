@@ -3,7 +3,7 @@ import os, sys
 import numpy as np
 import math
 import warnings
-import pprint
+# import p# print
 
 from functools import lru_cache
 from xml.etree import ElementTree
@@ -89,12 +89,12 @@ if __name__ == "__main__":
     assert net_file_path != ""
 
     dynamic_map = DynamicMap(net_file_path)
-    print("\n----- all data -----\n")
-    pprint.pprint(dynamic_map.data)
-    print("\n----- edge2edge -----\n")
-    pprint.pprint(dynamic_map.edge2edge)
-    print("\n----- edge2lanes -----\n")
-    pprint.pprint(dynamic_map.edge2lanes)
+    # print("\n----- all data -----\n")
+    # p# print.p# print(dynamic_map.data)
+    # print("\n----- edge2edge -----\n")
+    # p# print.p# print(dynamic_map.edge2edge)
+    # print("\n----- edge2lanes -----\n")
+    # p# print.p# print(dynamic_map.edge2lanes)
     sumoBinary = "sumo"
     if args.gui:
         sumoBinary = "sumo-gui"
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     while True:
         traci.simulationStep()
         NOW = float(traci.simulation.getTime())
-        print(f"{sys._getframe().f_code.co_name}, ----- {NOW} -----\n")
+        # print(f"{sys._getframe().f_code.co_name}, ----- {NOW} -----\n")
 
         del_ids = traci.simulation.getArrivedIDList()
         add_ids = traci.simulation.getDepartedIDList()
@@ -156,12 +156,14 @@ if __name__ == "__main__":
             cav = id2cavs[id]
             cav.clear_obstacle()
             # ----- for obstacles -----
+            # """
             for ob_id, _ in id2cavs.items():
                 ob_pos = traci.vehicle.getPosition(ob_id)
                 pos_vec = np.array(list(ob_pos)) - np.array(position)
                 pos_dist = math.dist(ob_pos, position)
                 angle_vec = np.array([math.cos(math.radians(angle)), math.sin(math.radians(angle))])
-                if cav.id is not ob_id and -1/2 <= cos_sim(pos_vec, angle_vec) and pos_dist <= 150:
+                if cav.id is not ob_id and -math.sqrt(3)/2 <= cos_sim(pos_vec, angle_vec) and pos_dist <= 150:
+                # if cav.id is not ob_id and  <= cos_sim(pos_vec, angle_vec) and pos_dist <= 150:
                     ob_angle = -traci.vehicle.getAngle(ob_id) + 90
                     ob_speed = traci.vehicle.getSpeed(ob_id)
                     ob_accel = traci.vehicle.getAcceleration(ob_id)
@@ -176,6 +178,7 @@ if __name__ == "__main__":
                         speed=[ob_speed * math.cos(math.radians(ob_angle)), ob_speed * math.sin(math.radians(ob_angle)), 0],
                         accel=[ob_accel * math.cos(math.radians(ob_angle)), ob_accel * math.sin(math.radians(ob_angle)), 0],
                     ))
+            # """
 
             # mylogger.debug(f"time: {NOW}, id: {id}, neighber: {traci.vehicle.getNeighbors(id, 7)}, follower: "),
             # neighbers = traci.vehicle.getNeighbors(id, 7)
@@ -207,14 +210,15 @@ if __name__ == "__main__":
             # ----- update vehicle state -----
             angle, p, v, a, progress = cav.state(NOW + 0.1)
             max_speed = max([
-                speed,
+                # speed,
                 min([
                     max_speed,
                     dynamic_map.max_speed(traci.vehicle.getRoute(id)[traci.vehicle.getRouteIndex(id)], traci.vehicle.getLaneID(id), max_speed
                 )])
             ])
             max_accel = max([math.fabs(accel), traci.vehicle.getAccel(id)])
-            if p is None or 0.5 <= progress:
+            # if p is None or (4 / (speed + 1)) / 10 <= progress:
+            if p is None or 0.1 <= progress:
                 mylogger.debug(f"time: {NOW}, id: {id}, waypoints: {optimal_waypoints(dynamic_map, edges, current_route_index, position)}")
                 cav.generate_new_path(
                     optimal_waypoints(dynamic_map, edges, current_route_index, position),
@@ -228,18 +232,18 @@ if __name__ == "__main__":
                 )
                 angle, p, v, a, progress = cav.state(NOW + 0.1)
 
-            # # print(traci.vehicle.getPosition(id))
+            # # # print(traci.vehicle.getPosition(id))
 
-            print(f"{sys._getframe().f_code.co_name}, id: {id}, angle: {angle}, pos: {p}, speed: {v}, accel: {a}, progress: {progress}, lane: {traci.vehicle.getLaneID(id)}")
-            print(f"{sys._getframe().f_code.co_name}, current_pos: {traci.vehicle.getPosition(id)}")
+            # print(f"id: {id}, angle: {angle}, pos: {p}, speed: {v}, accel: {a}, progress: {progress}, lane: {traci.vehicle.getLaneID(id)}")
+            # print(f"{sys._getframe().f_code.co_name}, current_pos: {traci.vehicle.getPosition(id)}")
 
-            # # print(cav.path.all_paths())
+            # # # print(cav.path.all_paths())
             try:
                 if p is not None:
-                    # print(f"dist: {math.dist(position, cav.waypoints[-1])}")
+                    # # print(f"dist: {math.dist(position, cav.waypoints[-1])}")
                     if 20 <= math.dist(position, cav.waypoints[-1]):
                         # keep_route = 1
-                        mylogger.debug(f"time: {NOW}, id: {id}, could change: {traci.vehicle.couldChangeLane(id, -1)}, {traci.vehicle.couldChangeLane(id, 1)}, state: {traci.vehicle.getLaneChangeStatePretty(id, -1)}, {traci.vehicle.getLaneChangeStatePretty(id, 1)}, {traci.vehicle.wantsAndCouldChangeLane(id, -1, state=None)}, {traci.vehicle.wantsAndCouldChangeLane(id, 1, state=None)}")
+                        mylogger.debug(f"time: {NOW}, id: {id}, angle: {angle}, could change: {traci.vehicle.couldChangeLane(id, -1)}, {traci.vehicle.couldChangeLane(id, 1)}, state: {traci.vehicle.getLaneChangeStatePretty(id, -1)}, {traci.vehicle.getLaneChangeStatePretty(id, 1)}, {traci.vehicle.wantsAndCouldChangeLane(id, -1, state=None)}, {traci.vehicle.wantsAndCouldChangeLane(id, 1, state=None)}")
                         lane_change_right_state = traci.vehicle.getLaneChangeStatePretty(id, -1)[1]
                         if 'right' in lane_change_right_state and 'stay' not in lane_change_right_state:
                             traci.vehicle.changeLaneRelative(id, -1, 1)
@@ -257,6 +261,7 @@ if __name__ == "__main__":
                             -1,
                             p[0],
                             p[1],
+                            # math.degrees(angle) + 90
                             # matchThreshold=1,
                             # keepRoute=4
                             # math.degrees(angle) + 90
@@ -304,9 +309,12 @@ if __name__ == "__main__":
                         veh_ids.remove(id)
 
                     else:
-                        # warnings.warn(f"No path: id: {id}, pos: {position}, force to stop")
-                        mylogger.warning(f"No path: id: {id}, pos: {position}, force to stop")
-                        traci.vehicle.setSpeed(id, 0)
+                        # raise Exception(f"No path, {id}")
+                        mylogger.debug(f"No path: time: {NOW}, id: {id}, pos: {position}, change control to sumo temprally.")
+                        # mylogger.warning(f"No path: id: {id}, pos: {position}, force to stop")
+                        # temp_v = min([speed - args.step * max_accel, 0])
+                        duration = max([(speed - 0) / max_accel, args.step])
+                        traci.vehicle.slowDown(id, 0, duration)
                         # raise Exception(f"No path: id: {id}, pos: {position}")
                         # traci.vehicle.setSpeed(id, -1)
 

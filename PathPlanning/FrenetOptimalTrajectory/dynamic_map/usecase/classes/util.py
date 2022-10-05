@@ -60,7 +60,7 @@ def ACC_l(c_v, length_l):
     l_safe = 5
     h = 1
 
-    return (h * c_v + l_safe) + length_l
+    return 3.6 * c_v
 
 def liner_coefficients_by_2_points(p1, p2):
     # ex, y = ax + b, return a, b

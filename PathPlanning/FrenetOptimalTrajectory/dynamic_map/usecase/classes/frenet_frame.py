@@ -1,6 +1,6 @@
 import sys
 import os
-import pprint
+# import p# print
 
 import copy
 
@@ -13,8 +13,10 @@ from frenet_optimal_trajectory import (
     QuarticPolynomial,
     FrenetPath
 )
-
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "./")
 from .poly import Poly
+
+# from .poly import Poly
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "../..//../../../QuinticPolynomialsPlanner/")
 from quintic_polynomials_planner import QuinticPolynomial
@@ -23,11 +25,11 @@ class FrenetOptimalTrajectry:
     # cite from: https://github.com/AtsushiSakai/PythonRobotics
 
     def __init__(self, waypoints, current_speed, current_accel, target_times=None, max_tt=5, min_tt=4, d_tt=0.1):
-        # # print(waypoints)
+        # # # print(waypoints)
         self.waypoints = waypoints
         self.waypoints_x = [d[0] for d in waypoints]
         self.waypoints_y = [d[1] for d in waypoints]
-        # print(f"waypoints_y: {self.waypoints_y}")
+        # # print(f"waypoints_y: {self.waypoints_y}")
         self.csp = self.__csp(self.waypoints_x, self.waypoints_y)
         # self.road_width_list = road_width_list
 
@@ -71,8 +73,8 @@ class FrenetOptimalTrajectry:
             a1, b1 = liner_coefficients_by_2_points(p1, p2)
             a2, b2 = 1, -position[0] + position[1]
 
-            # print(self.waypoints)
-            # print(f"{sys._getframe().f_code.co_name}, a1: {a1}, b1: {b1}, a2: {a2}, b2: {b2}, s1: {s1}, s2: {s2}")
+            # # print(self.waypoints)
+            # # print(f"{sys._getframe().f_code.co_name}, a1: {a1}, b1: {b1}, a2: {a2}, b2: {b2}, s1: {s1}, s2: {s2}")
             cross_p = cross_point(a1, b1, a2, b2)
 
             x = cross_p[0]
@@ -86,7 +88,7 @@ class FrenetOptimalTrajectry:
             if rad_by_points(self.waypoints[i], self.waypoints[i+1]) < 0:
                 d = -d
 
-            # print(f"{sys._getframe().f_code.co_name}, d: {d}, s_tmp: {s_tmp}, cross_point: {cross_p}, position: {position}")
+            # # print(f"{sys._getframe().f_code.co_name}, d: {d}, s_tmp: {s_tmp}, cross_point: {cross_p}, position: {position}")
             if math.fabs(d) < d_min and s1 <= s_tmp <= s2:
                 d_min = math.fabs(d)
                 s = s_tmp
@@ -133,14 +135,14 @@ class FrenetOptimalTrajectry:
         csp = self.csp
 
         for fp in fplist:
-            # print(f"\n ----- {sys._getframe().f_code.co_name}")
-            # print(f"{sys._getframe().f_code.co_name}, fp.s: {fp.s}")
-            # print(f"{sys._getframe().f_code.co_name}, fp.s_d: {fp.s_d}")
-            # print(f"{sys._getframe().f_code.co_name}, fp.s_dd: {fp.s_dd}")
+            # # print(f"\n ----- {sys._getframe().f_code.co_name}")
+            # # print(f"{sys._getframe().f_code.co_name}, fp.s: {fp.s}")
+            # # print(f"{sys._getframe().f_code.co_name}, fp.s_d: {fp.s_d}")
+            # # print(f"{sys._getframe().f_code.co_name}, fp.s_dd: {fp.s_dd}")
             for i in range(len(fp.s)):
                 ix, iy = csp.calc_position(fp.s[i])
                 if ix is None or math.isnan(ix):
-                    print(f"{sys._getframe().f_code.co_name}, i: {i}, s: {fp.s[i]}")
+                    # print(f"{sys._getframe().f_code.co_name}, i: {i}, s: {fp.s[i]}")
                     break
                 i_yaw = csp.calc_yaw(fp.s[i])
                 di = fp.d[i]
@@ -150,7 +152,7 @@ class FrenetOptimalTrajectry:
                 fp.y.append(fy)
 
             # calc yaw and ds
-            # print(fp.x)
+            # # print(fp.x)
             if len(fp.x) <= 1:
                 continue
 
@@ -170,12 +172,73 @@ class FrenetOptimalTrajectry:
                 else:
                     fp.c.append((fp.yaw[i + 1] - fp.yaw[i]) / fp.ds[i])
 
-            # print(fp.__dict__)
+            # # print(fp.__dict__)
         return fplist
 
+    # def frenet_path_by_logic(self, tt, td, ts, tv, ta):
+    #     fp = FrenetPath()
+    #     fp.t = [t for t in np.arange(0.0, tt, 0.1)]
+    #
+    #     fp.d = [0 for _ in fp.t]
+    #     fp.d_d = [0 for _ in fp.t]
+    #     fp.d_dd = [0 for _ in fp.t]
+    #     fp.d_ddd = [0 for _ in fp.t]
 
     def frenet_path(self, tt, td, ts, tv, ta):
-        print(f"{sys._getframe().f_code.co_name}, tt: {tt}, td: {td}, ts: {ts}, tv: {tv}, ta: {ta}")
+        print(f"{sys._getframe().f_code.co_name}, tt: {tt}, td: {td}, ts: {ts}, tv: {tv}, ta: {ta}, cs: {self.c_s}, csd: {self.c_s_d}, csdd: {self.c_d_dd}")
+        fp = FrenetPath()
+        fp.t = [t for t in np.arange(0.0, tt, 0.1)]
+        lat_qp = QuinticPolynomial(self.c_d, self.c_d_d, self.c_d_dd, td, 0.0, 0.0, tt)
+        # lat_qp = Poly(6)
+        # lat_qp.add_constrain(self.c_d, 0, 0)
+        # lat_qp.add_constrain(self.c_d_d, 0, 1)
+        # lat_qp.add_constrain(self.c_d_dd, 0, 2)
+        # lat_qp.add_constrain(td, tt, 0)
+        # lat_qp.add_constrain(0, tt, 1)
+        # lat_qp.add_constrain(0, tt, 2)
+        # lat_qp.set_coefficients()
+
+        fp.d = [lat_qp.calc_point(t) for t in fp.t]
+        fp.d_d = [lat_qp.calc_first_derivative(t) for t in fp.t]
+        fp.d_dd = [lat_qp.calc_second_derivative(t) for t in fp.t]
+        fp.d_ddd = [lat_qp.calc_third_derivative(t) for t in fp.t]
+
+        tfp = copy.deepcopy(fp)
+        lon_qp = None
+        print("aaa")
+        if ts is None:
+            lon_qp = Poly(3)
+            lon_qp.add_constrain(self.c_s, 0, 0)
+            lon_qp.add_constrain(self.c_s_d, 0, 1)
+            lon_qp.add_constrain(self.c_s_dd, 0, 2)
+            # lon_qp.add_constrain(self.c_s, 0, 0)
+            lon_qp.add_constrain(tv, tt, 1)
+            lon_qp.add_constrain(ta, tt, 2)
+            lon_qp.set_coefficients()
+        else:
+            lon_qp = Poly(3)
+            lon_qp.add_constrain(self.c_s, 0, 0)
+            lon_qp.add_constrain(self.c_s_d, 0, 1)
+            lon_qp.add_constrain(self.c_s_dd, 0, 2)
+            lon_qp.add_constrain(ts, tt, 0)
+            lon_qp.add_constrain(tv, tt, 1)
+            lon_qp.add_constrain(ta, tt, 2)
+            lon_qp.set_coefficients()
+
+        tfp.s = [lon_qp.calc_point(t) for t in fp.t]
+        tfp.s_d = [lon_qp.calc_first_derivative(t) for t in fp.t]
+        tfp.s_dd = [lon_qp.calc_second_derivative(t) for t in fp.t]
+        tfp.s_ddd = [lon_qp.calc_third_derivative(t) for t in fp.t]
+
+        print(tfp.s)
+        print(tfp.s_d)
+        print(tfp.s_dd)
+
+        return self.tfp_with_cost(tfp, tt, tv)
+
+    """
+    def frenet_path_with_const_acc(self, tt, td, ts, tv, ta):
+        # print(f"{sys._getframe().f_code.co_name}, tt: {tt}, td: {td}, ts: {ts}, tv: {tv}, ta: {ta}")
         fp = FrenetPath()
         fp.t = [t for t in np.arange(0.0, tt, 0.1)]
         lat_qp = QuinticPolynomial(self.c_d, self.c_d_d, self.c_d_dd, td, 0.0, 0.0, tt)
@@ -196,6 +259,7 @@ class FrenetOptimalTrajectry:
         tfp.s_ddd = [lon_qp.calc_third_derivative(t) for t in fp.t]
 
         return self.tfp_with_cost(tfp, tt, tv)
+    """
 
     def tfp_with_cost(self, tfp, tt, tv):
         Jp = sum(np.power(tfp.d_ddd, 2))  # square of jerk

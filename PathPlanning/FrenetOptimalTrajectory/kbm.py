@@ -8,11 +8,14 @@ import math
 import json
 import time
 import struct
+import gzip
+from bitstring import BitArray
 
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 
-from func import point2func
+from func import point2func, poly
+from compression import ShannonFennonCompression, HuffmanCompression
 
 plt.rcParams["font.size"] = 18
 
@@ -27,23 +30,65 @@ class MCM:
         self.z = z
         self.t = t
 
+        # self.x = np.diff(np.array(x))
+        # self.y = np.diff(np.array(y))
+        # self.z = np.diff(np.array(z))
+        # self.t = np.diff(np.array(t))
+
+        self.t_bit = 20
+        self.x_bit = 20
+        self.y_bit = 20
+        self.z_bit = 20
+
+        self.size_1_point = self.t_bit + self.x_bit + self.y_bit + self.z_bit
+
     def size(self):
-        return 9 * len(t)
+        return self.size_1_point * len(self.t) / 8.0
 
     def bit_str(self):
         result = ''
 
         for i in range(0, len(self.t)):
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.t[i])[::-1]])
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.x[i])[::-1]])[0:24]
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.y[i])[::-1]])[0:24]
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.z[i])[::-1]])[0:16]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.t[i])[::-1]])[0:self.t_bit]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.x[i])[::-1]])[0:self.x_bit]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.y[i])[::-1]])[0:self.y_bit]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.z[i])[::-1]])[0:self.z_bit]
 
         return result
 
+    def bit2points(self, bit_str):
+        # one_point_bit_length (OPBL)
+        OPBL = self.size_1_point
 
+        assert (len(bit_str) % OPBL == 0)
 
-def multi_container(t, x, max_dim, error_th):
+        be = 0
+        en = be + self.t_bit
+        t_bits = [bit_str[OPBL * i + be: OPBL * i + en] for i in range(0, int(len(bit_str) / OPBL))]
+
+        be = en
+        en = en + self.x_bit
+        x_bits = [bit_str[OPBL * i + be: OPBL * i + en] for i in range(0, int(len(bit_str) / OPBL))]
+
+        be = en
+        en = en + self.y_bit
+        y_bits = [bit_str[OPBL * i + be: OPBL * i + en] for i in range(0, int(len(bit_str) / OPBL))]
+
+        be = en
+        en = en + self.z_bit
+        z_bits = [bit_str[OPBL * i + be: OPBL * i + en] for i in range(0, int(len(bit_str) / OPBL))]
+
+        # print(t_bits)
+        t = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.t_bit), 2)))[0] for bit in t_bits]
+        x = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.x_bit), 2)))[0] for bit in x_bits]
+        y = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.y_bit), 2)))[0] for bit in y_bits]
+        z = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.z_bit), 2)))[0] for bit in z_bits]
+
+        return t, x, y, z
+
+# total_time = 0
+def multi_container(t, x, max_dim, error_th, start_dim=1):
+    # global total_time
     efficiency = -10
     result = {
         "efficient_point": 0,
@@ -52,10 +97,14 @@ def multi_container(t, x, max_dim, error_th):
         "ans": []
     }
 
-    for dim in range(1, max_dim + 1):
+    assert(start_dim < max_dim + 1)
+    for dim in range(start_dim, max_dim + 1):
         for point in range(1, len(t) + 1):
             # print(t)
+            # st = time.perf_counter()
             coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
+            # total_time += time.perf_counter() - st
+            # print(total_time)
 
             # print(f"middle: {point}, {len(t)}, {point == len(t)}")
 
@@ -104,6 +153,7 @@ def multi_container(t, x, max_dim, error_th):
 
 
             elif diff_x_max <= error_th:
+                # t_coef, t_diff_x_max, t_ans_x = coef, diff_x_max, ans_x
                 # print(f"less error: {dim}, {point}, {diff_x_max}")
                 continue
 
@@ -125,13 +175,8 @@ def multi_container(t, x, max_dim, error_th):
     else:
         point = result["efficient_point"]
         # print(f"last: {point}, {len(t[(point):])}")
-        return [result] + multi_container(t[(point):], x[(point):], max_dim, error_th)
+        return [result] + multi_container(t[(point):], x[(point):], max_dim, error_th, start_dim)
 
-
-def multi_container_wrapper(input):
-    t, x, max_dim, error_th = input
-
-    return multi_container(t, x, max_dim, error_th)
 
 def clip(v, v_min, v_max):
     if v < v_min:
@@ -339,8 +384,9 @@ if __name__ == "__main__":
     parser.add_argument('-rui', '--rotate_update_interval', type=float, default=100)
     parser.add_argument('-rv', '--rotate_value', type=float, default=0)
     parser.add_argument('-rt', '--rotate_type', action='store_true')
-    parser.add_argument('-dim', type=int, default=20)
+    # parser.add_argument('-dim', type=int, default=20)
     parser.add_argument('-maxdim', type=int, default=10)
+    parser.add_argument('-mindim', type=int, default=1)
 
 
     args = parser.parse_args()    # 4. 引数を解析
@@ -400,12 +446,12 @@ if __name__ == "__main__":
     # print(t)
 
     # _, diff_x_max, diff_y_max, diff_max, ans_x, ans_y = point2func(t, x, y, args.dim)
-    _, diff_x_max, ans_x = point2func(t, x, args.dim)
-    _, diff_y_max, ans_y = point2func(t, y, args.dim)
-
-    d_x = np.array(x) - np.array(ans_x)
-    d_y = np.array(y) - np.array(ans_y)
-    diff_max = max([math.sqrt(d_x[i] * d_x[i] + d_y[i] * d_y[i]) for i in range(0, len(d_x))])
+    # _, diff_x_max, ans_x = point2func(t, x, args.dim)
+    # _, diff_y_max, ans_y = point2func(t, y, args.dim)
+    #
+    # d_x = np.array(x) - np.array(ans_x)
+    # d_y = np.array(y) - np.array(ans_y)
+    # diff_max = max([math.sqrt(d_x[i] * d_x[i] + d_y[i] * d_y[i]) for i in range(0, len(d_x))])
 
     # print('{:.20f}, {:.20f}, {:}'.format(diff_x_max, diff_y_max, args.__dict__))
     # file_name = "_".join([f"{k}_{v}" for k, v in args.__dict__.items()])
@@ -444,27 +490,29 @@ if __name__ == "__main__":
 
     # ----- proposed -----
     acceptance_error = args.error_th / math.sqrt(3.0)
-    start_time = time.perf_counter()
     z = [0] * len(t)
-    res_x = multi_container(t[:], x[:], args.maxdim, acceptance_error)
-    res_y = multi_container(t[:], y[:], args.maxdim, acceptance_error)
-    res_z = multi_container(t[:], z[:], args.maxdim, acceptance_error)
 
-    # ----- previous 1 -----
-    mcm = MCM(x, y, z, t)
-    print(mcm.bit_str())
-
-    # res = Pool(3).map(multi_container_wrapper, args)  # マルチプロセスの実行
-    # # print(res)  # 各プロセスで実行した関数の戻り値がリストで返ってくる
-    # res_x = res[0]
-    # res_y = res[1]
-    # res_z = res[2]
+    # --- compress ---
+    start_time = time.perf_counter()
+    res_x = multi_container(t[:], x[:], args.maxdim, acceptance_error, args.mindim)
+    res_y = multi_container(t[:], y[:], args.maxdim, acceptance_error, args.mindim)
+    res_z = multi_container(t[:], z[:], args.maxdim, acceptance_error, args.mindim)
     take_time = time.perf_counter() - start_time
 
-    # print(res_x)
-    # print(res_y)
-    ans_x = sum([d["ans"] for d in res_x], [])
-    start_point_x = np.array([0] + [len(d["ans"]) for d in res_x])
+    # --- decompress ---
+    points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_x]))
+    ans_x = [[poly(res_x[j]["coefficients"].flatten(), i * args.dt) for j in range(0, len(points) - 1)] for i in range(points[j], points[j + 1]) ]
+    points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_y]))
+    ans_y = [[poly(res_y[j]["coefficients"].flatten(), i * args.dt) for j in range(0, len(points) - 1)] for i in range(points[j], points[j + 1]) ]
+    points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_z]))
+    ans_x = [[poly(res_z[j]["coefficients"].flatten(), i * args.dt) for j in range(0, len(points) - 1)] for i in range(points[j], points[j + 1]) ]
+
+
+    print("----- original points -----")
+    print((t, x, y, z))
+
+    # ans_x = sum([d["ans"] for d in res_x], [])
+    start_point_x = np.array([0] + ans_x
     start_point_x = list(np.cumsum(start_point_x))
     # print(start_point_x)
     start_time_x = [t[d] for d in start_point_x[:-1]]
@@ -520,6 +568,94 @@ if __name__ == "__main__":
 
     etsi_x, etsi_y, etsi_t = car.path_filterd_by_ETSI()
 
+    print("----- prev 1 points -----")
+    # ----- previous 1 -----
+    mcm = MCM(etsi_x, etsi_y, [0 for _ in range(0, len(etsi_t))], etsi_t)
+    bits = mcm.bit_str()
+    b = BitArray(bin=bits)
+    # print(b)
+    print(mcm.size())
+    # print(mcm.bit2points(bits))
+
+    # gz = gzip.open(b, mode='rb', compresslevel=9, encoding=None, errors=None, newline=None)
+    start_time = time.perf_counter()
+    # print(len(b.tobytes()))
+    gzip_com = gzip.compress(b.tobytes(), compresslevel=9, mtime=None)
+    print(len(gzip_com))
+    print(time.perf_counter() - start_time)
+    # f = open('mcm_bits.dat', 'w')
+    # f.write(bits)
+    # f.close()
+
+    print("----- prev 2 points -----")
+
+    # print(K)
+    # K = 16
+    # K = 16 * 16
+    # K = 16 * 128
+    # K = 16 * 256
+    K = 2**6
+    K = int(math.log2(K))
+    # print(len(bits))
+    # symbols = "".join([str(int(bits[K * i: K * (i + 1)], 2)) for i in range(0, int(len(bits) / K))])
+    symbols = [str(int(bits[K * i: K * (i + 1)], 2)) for i in range(0, int(len(bits) / K))]
+    # print([str(int(bits[K * i: K * (i + 1)], 2)) for i in range(0, int(len(bits) / K))])
+    # print(len([str(int(bits[K * i: K * (i + 1)], 2)) for i in range(0, int(len(bits) / K))]))
+    # symbols = symbols + str(int(bits[K * i: K * (i + 1)], 2))
+    # print(symbols)
+    # print(K * int(len(bits) / K))
+    if K * int(len(bits) / K) < len(bits):
+        symbols = symbols + [str(int(bits[K * int(len(bits) / K):], 2))]
+    start_time = time.perf_counter()
+    result = ShannonFennonCompression().compress(symbols)
+    size = 0
+    sym2bit = {}
+    overhead_bit = 0
+    max_simbit = max([math.log2(len(i.code)) + 1 for i in result])
+    overhead_bit = (K + max_simbit) * len(result)
+    for i in result:
+        # print(f"Character-- {i.original}:: Code-- {i.code} :: Probability-- {i.probability}")
+        sym2bit[i.symbol] = i.code
+
+
+    compressed_data = ""
+    for sym in symbols:
+        # print(sym)
+        # print(sym2bit[sym])
+        compressed_data = compressed_data + sym2bit[sym]
+
+    print(time.perf_counter() - start_time)
+    print(f"{len(compressed_data) / 8}, {overhead_bit / 8.0}, {max_simbit}")
+
+    print("----- prev 3 points -----")
+    symbols = [str(int(bits[K * i: K * (i + 1)], 2)) for i in range(0, int(len(bits) / K))]
+    if K * int(len(bits) / K) < len(bits):
+        symbols = symbols + [str(int(bits[K * int(len(bits) / K):], 2))]
+    start_time = time.perf_counter()
+    # print(symbols)
+    result = HuffmanCompression().compress(symbols)
+    # print(result)
+    size = 0
+    sym2bit = {}
+    # max_simbit = max([len(i.code) for i in result])
+    max_simbit = max([math.log2(len(i.code)) + 1 for i in result])
+    overhead_bit = (K + max_simbit) * len(list(result[:]))
+
+    for i in result:
+        # print(f"Character-- {i.original}:: Code-- {i.code} :: Probability-- {i.probability}")
+        sym2bit[i.symbol] = i.code
+
+    compressed_data = ""
+    # print(sym2bit)
+    for sym in symbols:
+        compressed_data = compressed_data + sym2bit[sym]
+
+    print(time.perf_counter() - start_time)
+    print(len(compressed_data) / 8)
+    print(f"{len(compressed_data) / 8}, {overhead_bit / 8.0}")
+    # print(compressed_data)
+
+    print("----- proposed -----")
     dim_dict = {
         "x": [d["efficient_dim"] for d in res_x],
         "y": [d["efficient_dim"] for d in res_y]
@@ -530,4 +666,4 @@ if __name__ == "__main__":
     # z_size = 2 + 2 + 4
     size = 14 + x_size + y_size + z_size
     # print(t)
-    print('{:}, {:}, {:}, {:}'.format(size, 9 * len(etsi_x), take_time, file_name))
+    print('{:}, {:}, {:}, {:}'.format(size, mcm.size(), take_time, file_name))

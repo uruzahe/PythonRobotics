@@ -1,6 +1,9 @@
 import numpy as np
 import math
 
+def poly(coefficients, x):
+    return sum([coefficients[i] * math.pow(x, i) for i in range(0, len(coefficients))])
+
 def point2func(t_l, x_l, y_l, dim=10):
     # print("----- t -----")
     # print(t_l)
@@ -67,14 +70,14 @@ def point2func(t_l, x_l, dim=10):
     # print("----- point_matrix -----")
     # print(point_matrix)
 
-    origin_time_matrix = []
-    for t in t_l:
-        tmp = []
-
-        for i in range(0, dim):
-            tmp.append(math.pow(t, i))
-
-        origin_time_matrix.append(tmp)
+    origin_time_matrix = [[math.pow(t, i) for i in range(0, dim)] for t in t_l]
+    # for t in t_l:
+    #     tmp = []
+    #
+    #     for i in range(0, dim):
+    #         tmp.append(math.pow(t, i))
+    #
+    #     origin_time_matrix.append(tmp)
 
     time_matrix = np.array(origin_time_matrix)
     # # print("----- time_matrix -----")

@@ -143,7 +143,7 @@ class Spline2D:
         self.ds = np.hypot(dx, dy)
         s = [0]
         s.extend(np.cumsum(self.ds))
-        print(f"{dx}, {dy}, {s}")
+        # print(f"{dx}, {dy}, {s}")
         return s
 
     def calc_position(self, s):

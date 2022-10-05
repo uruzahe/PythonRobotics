@@ -1,4 +1,4 @@
-import pprint
+# import p# print
 
 from xml.etree import ElementTree
 
@@ -12,9 +12,9 @@ class DynamicMap:
         self.edge2lanes = self.__edge2lanes()
 
     def max_speed(self, edge_id, lane_id, default_max_speed):
-        print(f"lane_id: {lane_id}")
+        # print(f"lane_id: {lane_id}")
 
-        if lane_id is not "":
+        if lane_id != "":
             lane_index = lane_id.split("_")[1]
 
             if lane_index not in self.edge2lanes[edge_id]:
@@ -30,8 +30,8 @@ class DynamicMap:
         first_lane_shape = self.__parse_shape(lanes['0']['shape'])
         last_lane_shape = self.__parse_shape(lanes[str(len(lanes) - 1)]['shape'])
 
-        # # print(first_lane_shape)
-        # # print(current_position)
+        # # # print(first_lane_shape)
+        # # # print(current_position)
         a1, b1 = liner_coefficients_by_2_points(first_lane_shape[0], first_lane_shape[1])
         a2, b2 = liner_coefficients_by_2_points(last_lane_shape[0], last_lane_shape[1])
 
@@ -58,6 +58,7 @@ class DynamicMap:
     #
     #         from_lane_shape = self.edge2lanes[from_edge][from_lane_index]['shape'].split(" ")
     #         to_lane_shape = self.edge2lanes[to_edge][to_lane_index]['shape'].split(" ")
+    
     def waypoints_list(self, edges, from_lane_index=None):
         if from_lane_index == None:
             return [self.waypoints_list(edges, fli) for fli in self.edge2lanes[edges[0]].keys()]
@@ -93,8 +94,8 @@ class DynamicMap:
         if 0 < len(edges) <= 1:
             from_edge = edges[0]
 
-            # # print(from_edge)
-            # # print(self.edge2lanes[from_edge])
+            # # # print(from_edge)
+            # # # print(self.edge2lanes[from_edge])
             for lane_index, lane in self.edge2lanes[from_edge].items():
                 return [(float(d.split(",")[0]), float(d.split(",")[1])) for d in lane['shape'].split(" ")]
 

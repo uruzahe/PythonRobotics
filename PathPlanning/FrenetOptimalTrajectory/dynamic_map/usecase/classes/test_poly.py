@@ -11,7 +11,7 @@ for x in xl:
 poly.set_coefficients()
 
 for x in xl:
-    # print(f"{func1(x)}, {poly.value(x)}, {poly.value(x, 1)}")
+    print(f"{func1(x)}, {poly.value(x)}, {poly.value(x, 1)}")
 
 # print("----- func2 -----")
 poly = Poly(1)
@@ -25,7 +25,7 @@ for x in xl:
 poly.set_coefficients()
 
 for x in xl:
-    # print(f"{func2(x)}, {poly.value(x)}, {poly.value(x, 1)}")
+    print(f"{func2(x)}, {poly.value(x)}, {poly.value(x, 1)}")
 
 
 # print("----- func3 -----")
@@ -41,7 +41,7 @@ for x in xl:
 poly.set_coefficients()
 
 for x in xl:
-    # print(f"{func3(x)}, {poly.value(x)}, {poly.value(x, 1)}, {poly.value(x, 2)}")
+    print(f"{func3(x)}, {poly.value(x)}, {poly.value(x, 1)}, {poly.value(x, 2)}")
 
 
 # print("----- func4 derivation -----")
@@ -57,8 +57,9 @@ poly.add_constrain(8, 1, 2)
 poly.add_constrain(6, 1, 3)
 poly.set_coefficients()
 
+print("1 + x + x^2 + x^3")
 for x in xl:
-    # print(f"{func4(x)}, {poly.value(x)}, {poly.value(x, 1)}, {poly.value(x, 2)}, {poly.value(x, 3)}")
+    print(f"{func4(x)}, {poly.value(x)}, {poly.value(x, 1)}, {poly.value(x, 2)}, {poly.value(x, 3)}")
 
 # print("----- func5 derivation -----")
 poly = Poly(3)
@@ -76,4 +77,4 @@ poly.add_constrain(10, 0, 2)
 poly.set_coefficients()
 
 for x in xl:
-    # print(f"{func5(x)}, {poly.value(x)}, {poly.value(x, 1)}, {poly.value(x, 2)}, {poly.value(x, 3)}")
+    print(f"{func5(x)}, {poly.value(x)}, {poly.value(x, 1)}, {poly.value(x, 2)}, {poly.value(x, 3)}")

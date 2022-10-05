@@ -41,7 +41,7 @@ class Path:
         else:
             angle = math.atan(vec[1]/vec[0])
         progress = index / (len(pl) - 1)
-        # print(f"vec: {vec}")
+        # # print(f"vec: {vec}")
 
         return angle, p, v, a, progress
 
@@ -71,6 +71,11 @@ class Path:
 
     def all_paths(self):
         return self.data
+
+    def times(self):
+        data = sorted(self.data.items(), key=lambda x:x[0])
+
+        return [float(d[0]) for d in data]
 
 class Obstacle:
     def __init__(self, t, position=[0, 0, 0], speed=[0, 0, 0], accel=[0, 0, 0]):
@@ -104,7 +109,7 @@ class CarObstacle(Obstacle):
         # assert(np.isnan(self.heading) is False)
         if path is not None:
             self.path = path
-            # # print(path)
+            # # # print(path)
             angle, p, v, a, progress = self.path.state(t)
 
             self.position = p
@@ -128,62 +133,68 @@ class CarObstacle(Obstacle):
         return self.position_to_shapes(self.pos(t), self.heading, self.width, self.length)
 
     def check_collision(self, obstacle_obj, t):
-
-        for ob_c in obstacle_obj.corners(obstacle_obj.pos(t), obstacle_obj.heading, obstacle_obj.width, obstacle_obj.length):
-            if any([ math.dist(ob_c, self_c) <= 0.5 for self_c in self.corners(self.pos(t), self.heading, self.width, self.length) ]):
-                return True
-
-        return False
-
-        # self_p = self.pos(t)
-
-        # if self.length < math.dist(self_p, obstacle_obj.pos(t)):
-        #     return False
-
-        # print(f"{sys._getframe().f_code.co_name}, t: {t}, id: {self.id}, ob_id: {obstacle_obj.id}, pos: {self_p}, ob_pos: {obstacle_obj.pos(t)}, a: {a}, b: {b}, c: {c}, d: {d}")
-        # print(obstacle_obj.positions(t))
-        # for p in obstacle_obj.positions(t):
-        #     if is_collide(a, b, c, d, p):
-        #         print(f"collision point: {p}")
-        #         # ----- collide -----
+        # for ob_c in obstacle_obj.corners(obstacle_obj.pos(t), obstacle_obj.heading, obstacle_obj.width, obstacle_obj.length):
+        #     if any([ math.dist(ob_c, self_c) <= 0.5 for self_c in self.corners(self.pos(t), self.heading, self.width, self.length) ]):
         #         return True
-        #
-        #     else:
-        #         # ----- no collide -----
-        #         continue
         #
         # return False
 
-    def corners(self, position, heading, width, length):
-        # # print(heading)
-        # # print(width)
-        # # print(length)
+        self_p = self.pos(t)
+
+        if self.length < math.dist(self_p, obstacle_obj.pos(t)):
+            return False
+
+        a, b, c, d = self.corners(self.pos(t), self.heading, self.width, self.length, 0, ACC_l(math.dist(self.speed, [0, 0, 0]), self.length))
+        print(f"{sys._getframe().f_code.co_name}, t: {t}, id: {self.id}, ob_id: {obstacle_obj.id}, pos: {self_p}, ob_pos: {obstacle_obj.pos(t)}, a: {a}, b: {b}, c: {c}, d: {d}")
+        print(obstacle_obj.positions(t))
+        for p in obstacle_obj.positions(t):
+            if is_collide(a, b, c, d, p):
+                print(f"collision point: {p}")
+                # ----- collide -----
+                return True
+
+            else:
+                # ----- no collide -----
+                continue
+
+        return False
+
+    def corners(self, position, heading, width, length, width_mergin=0, length_mergin=0):
+        # length_mergin = 0
+        # # # print(heading)
+        # # # print(width)
+
+        # length = length
+        # print(length)
+        # print(length_mergin)
         rad = math.radians(heading)
-        # # print(heading)
+        # # # print(heading)
         R = np.array([
             [np.cos(rad),   -np.sin(rad),   0],
             [np.sin(rad),   np.cos(rad),    0],
             [0,             0,              1]
             ])
 
-        a = np.array(position) + np.dot(R, np.array([0, width/2.0, position[2]]))
-        b = np.array(position) + np.dot(R, np.array([-length, width/2.0, position[2]]))
-        c = np.array(position) + np.dot(R, np.array([-length, -width/2.0, position[2]]))
-        d = np.array(position) + np.dot(R, np.array([0, -width/2.0, position[2]]))
+        a = np.array(position) + np.dot(R, np.array([length_mergin + 0,         width/2.0,  position[2]]))
+        b = np.array(position) + np.dot(R, np.array([-length - length_mergin,    width/2.0,  position[2]]))
+        c = np.array(position) + np.dot(R, np.array([-length - length_mergin,    -width/2.0, position[2]]))
+        d = np.array(position) + np.dot(R, np.array([length_mergin + 0,         -width/2.0, position[2]]))
 
-        # print(f"id: {self.id}, R: {R}, width: {width}, length: {length}, pos: {position}, a: {a}, b: {b}, c: {c}, d: {d}, rad: {rad}, heading: {heading}")
+        # # print(f"id: {self.id}, R: {R}, width: {width}, length: {length}, pos: {position}, a: {a}, b: {b}, c: {c}, d: {d}, rad: {rad}, heading: {heading}")
         # assert(np.isnan(rad) is False)
         return a, b, c, d
 
     def position_to_shapes(self, position, heading, width, length):
         a, b, c, d = self.corners(position, heading, width, length)
 
-        ab = [list(w * a + (1 - w) * b) for w in np.linspace(0, 1, int(np.linalg.norm(a - b)) + 1)]
-        bc = [list(w * b + (1 - w) * c) for w in np.linspace(0, 1, int(np.linalg.norm(b - c)) + 1)]
-        cd = [list(w * c + (1 - w) * d) for w in np.linspace(0, 1, int(np.linalg.norm(c - d)) + 1)]
-        da = [list(w * d + (1 - w) * a) for w in np.linspace(0, 1, int(np.linalg.norm(d - a)) + 1)]
+        # ab = [list(w * a + (1 - w) * b) for w in np.linspace(0, 1, int(np.linalg.norm(a - b)) + 1)]
+        # bc = [list(w * b + (1 - w) * c) for w in np.linspace(0, 1, int(np.linalg.norm(b - c)) + 1)]
+        # cd = [list(w * c + (1 - w) * d) for w in np.linspace(0, 1, int(np.linalg.norm(c - d)) + 1)]
+        # da = [list(w * d + (1 - w) * a) for w in np.linspace(0, 1, int(np.linalg.norm(d - a)) + 1)]
+        #
+        # return ab + bc + cd + da
 
-        return ab + bc + cd + da
+        return a, b, c, d
 
 class ObstacleHandler:
     def __init__(self):
@@ -220,7 +231,7 @@ class ObstacleHandler:
         result = []
 
         for ob in self.all_obstacles():
-            # # print(result)
+            # # # print(result)
             result = result + list(ob.positions(t))
 
         return result
