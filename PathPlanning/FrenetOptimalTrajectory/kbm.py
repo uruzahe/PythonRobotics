@@ -26,34 +26,91 @@ class MCM:
         assert(len(y) == len(z))
         assert(len(z) == len(t))
 
-        self.x = x
-        self.y = y
-        self.z = z
-        self.t = t
+        self.t0 = t[0]
+        self.t_d = t[1] - t[0]
+        self.x0 = x[0]
+        self.y0 = y[0]
+        self.z0 = z[0]
 
-        # self.x = np.diff(np.array(x))
-        # self.y = np.diff(np.array(y))
-        # self.z = np.diff(np.array(z))
-        # self.t = np.diff(np.array(t))
+        self.x = [x[i] - self.x0 for i in range(0, len(t))]
+        self.y = [y[i] - self.y0 for i in range(0, len(t))]
+        self.z = [z[i] - self.z0 for i in range(0, len(t))]
+        self.t = [t[i] - self.t0 for i in range(0, len(t))]
 
-        self.t_bit = 20
-        self.x_bit = 20
-        self.y_bit = 20
-        self.z_bit = 20
+        # self.etsi_x, self.etsi_y, self.etsi_z, self.etsi_t = self.ETSI_filter(self.x, self.y, self.z, self.t)
+
+        # ----- convert float to shot int -----
+        self.factor = 20
+        self.short_x = [int(d * self.factor) for d in self.x]
+        self.short_y = [int(d * self.factor) for d in self.y]
+        self.short_z = [int(d * self.factor) for d in self.z]
+        self.short_t = [int(d * self.factor) for d in self.t]
+
+        # ----- express as short int -----
+        self.t_bit = 16
+        self.x_bit = 16
+        self.y_bit = 16
+        self.z_bit = 16
 
         self.size_1_point = self.t_bit + self.x_bit + self.y_bit + self.z_bit
 
+        self.compressed_data = None
+        self.compressed_size = None
+
+    def cossim(self, x, y):
+        return np.dot(x,y)/(np.linalg.norm(x)*np.linalg.norm(y))
+
+    def ETSI_size(self):
+        _, _, _, _ = self.ETSI_filter(self.x, self.y, self.z, self.t)
+
+        return len(_) * self.size_1_point / 8.0
+
+    def ETSI_filter(self, x, y, z, t):
+        result = []
+
+        # print(t)
+        points = [(t[i], x[i], y[i], z[i]) for i in range(0, len(t))]
+        speeds = [np.linalg.norm(np.array(points[i][1:3]) - np.array(points[i - 1][1:3])) / (points[i][0] - points[i-1][0]) for i in range(1, len(points))]
+        heads = [math.degrees(self.cossim(np.array(points[i][1:3]) - np.array(points[i-1][1:3]), np.array(points[i-1][1:3]) - np.array(points[i-2][1:3]))) for i in range(2, len(points))]
+        speeds = speeds + [speeds[-1]]
+        heads = heads + [heads[-1], heads[-1]]
+
+        last_index = 0
+        for i in range(0, len(points)):
+            if len(result) <= 0:
+                result.append(points[i])
+
+            else:
+                dT = points[i][0] - points[last_index][0]
+                dP = np.linalg.norm(np.array(points[i][1:3]) - np.array(points[last_index][1:3]))
+                dV = speeds[i] - speeds[last_index]
+                dH = heads[i] - heads[last_index]
+
+                # print(f"{dT}, {dP}, {dV}, {dH}")
+                if 0.1 <= dT and (4 <= dP or 0.5 <= dV or 4 <= dH or 1.0 <= dT):
+                    # print("!!!")
+                    last_index = i
+                    result.append(points[i])
+
+        return [p[1] for p in result], [p[2] for p in result], [p[3] for p in result], [p[0] for p in result]
+
     def size(self):
-        return self.size_1_point * len(self.t) / 8.0
+        # return {ITS_PDU_HEADER (4 byte) + (size of t0, x0, y0, z0)}(20 Byte) + size_1_point * number of waypoints
+        return 20 + self.size_1_point * len(self.t) / 8.0
 
     def bit_str(self):
         result = ''
 
         for i in range(0, len(self.t)):
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.t[i])[::-1]])[0:self.t_bit]
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.x[i])[::-1]])[0:self.x_bit]
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.y[i])[::-1]])[0:self.y_bit]
-            result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.z[i])[::-1]])[0:self.z_bit]
+            # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.t[i])[::-1]])[0:self.t_bit]
+            # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.x[i])[::-1]])[0:self.x_bit]
+            # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.y[i])[::-1]])[0:self.y_bit]
+            # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.z[i])[::-1]])[0:self.z_bit]
+
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<h', self.short_t[i])[::-1]])[0:self.t_bit]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<h', self.short_x[i])[::-1]])[0:self.x_bit]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<h', self.short_y[i])[::-1]])[0:self.y_bit]
+            result = result + "".join([f"{x:08b}" for x in struct.pack('<h', self.short_z[i])[::-1]])[0:self.z_bit]
 
         return result
 
@@ -81,10 +138,26 @@ class MCM:
         z_bits = [bit_str[OPBL * i + be: OPBL * i + en] for i in range(0, int(len(bit_str) / OPBL))]
 
         # print(t_bits)
-        t = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.t_bit), 2)))[0] for bit in t_bits]
-        x = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.x_bit), 2)))[0] for bit in x_bits]
-        y = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.y_bit), 2)))[0] for bit in y_bits]
-        z = [struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.z_bit), 2)))[0] for bit in z_bits]
+        # t = [self.t0 + struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.t_bit), 2)))[0] for bit in t_bits]
+        # x = [self.x0 + struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.x_bit), 2)))[0] for bit in x_bits]
+        # y = [self.y0 + struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.y_bit), 2)))[0] for bit in y_bits]
+        # z = [self.z0 + struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.z_bit), 2)))[0] for bit in z_bits]
+
+        # for bit in t_bits:
+        #     print(bit + '0' * (16 - self.t_bit))
+        #     print(struct.pack('h', int(bit + '0' * (16 - self.t_bit), 2)))
+        #     print(struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.t_bit), 2)))[0])
+
+        t = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.t_bit), 2)))[0] for bit in t_bits]
+        x = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.x_bit), 2)))[0] for bit in x_bits]
+        y = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.y_bit), 2)))[0] for bit in y_bits]
+        z = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.z_bit), 2)))[0] for bit in z_bits]
+
+        # ----- convert short int to float -----
+        t = [self.t0 + d / self.factor for d in t]
+        x = [self.x0 + d / self.factor for d in x]
+        y = [self.y0 + d / self.factor for d in y]
+        z = [self.z0 + d / self.factor for d in z]
 
         return t, x, y, z
 
@@ -96,6 +169,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
     # global total_time
     efficiency = 0
     result = {
+        "start_time": t[0],
         "efficient_point": 0,
         "efficient_dim":  0,
         "coefficients": [],
