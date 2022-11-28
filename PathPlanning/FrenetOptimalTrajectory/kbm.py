@@ -16,6 +16,7 @@ from multiprocessing import Pool
 
 from func import point2func, poly
 from compression import ShannonFennonCompression, HuffmanCompression
+from google_polyline import PolylineCodec
 
 plt.rcParams["font.size"] = 18
 
@@ -60,7 +61,8 @@ class MCM:
         # one_point_bit_length (OPBL)
         OPBL = self.size_1_point
 
-        assert (len(bit_str) % OPBL == 0)
+        # assert (len(bit_str) % OPBL == 0)
+        bit_str = bit_str[0:len(bit_str)-(len(bit_str) % OPBL)]
 
         be = 0
         en = be + self.t_bit
@@ -87,9 +89,12 @@ class MCM:
         return t, x, y, z
 
 # total_time = 0
+# def multi_container2(t, x, max_dim, error_th, start_dim=1):
+
+
 def multi_container(t, x, max_dim, error_th, start_dim=1):
     # global total_time
-    efficiency = -10
+    efficiency = 0
     result = {
         "efficient_point": 0,
         "efficient_dim":  0,
@@ -99,7 +104,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
 
     assert(start_dim < max_dim + 1)
     for dim in range(start_dim, max_dim + 1):
-        for point in range(1, len(t) + 1):
+        for point in range(int(efficiency * dim + 1), len(t) + 1):
             # print(t)
             # st = time.perf_counter()
             coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
@@ -244,6 +249,8 @@ class Car:
         v_r = [self.v_log[0]]
         theta_r = [self.theta_log[0]]
 
+        min_dt = 1.0
+
         for i in range(0, len(self.t_log)):
             dt = math.fabs(self.t_log[i] - t_r[-1])
             dv = math.fabs(self.v_log[i] - v_r[-1])
@@ -265,7 +272,10 @@ class Car:
                     v_r.append(self.v_log[i])
                     theta_r.append(self.theta_log[i])
 
-        return x_r, y_r, t_r
+                    if dt < min_dt:
+                        min_dt = dt
+
+        return x_r, y_r, t_r, min_dt
 
     def latest_time(self):
         return self.t_log[-1]
@@ -410,7 +420,7 @@ if __name__ == "__main__":
     rotate_type = 1
     force_stop_time = args.np * args.dt
 
-    while car.latest_time() + args.d_dt <= force_stop_time:
+    while car.latest_time() + args.dt <= force_stop_time:
         # ----- generate acc randomly -----
         if a_update_time <= car.latest_time() and args.a_update_interval != 0:
             a_update_time = car.latest_time() + args.a_update_interval
@@ -439,8 +449,17 @@ if __name__ == "__main__":
             # print(f"time: {car.latest_time()}, type: strait, next_time: {rotate_update_time}")
 
 
-
+    etsi_x, etsi_y, etsi_t, min_dt = car.path_filterd_by_ETSI()
+    print(min_dt)
+    print(int(round(min_dt, 2) / args.dt))
+    print(args.d_dt / args.dt)
+    # x, y, t = car.path_by_point_num(args.np, int(round(min_dt, 2) / args.dt))
     x, y, t = car.path_by_point_num(args.np, int(args.d_dt / args.dt))
+
+    d = np.diff(np.array(x)) / args.dt
+    for i in range(0, 20):
+        print(f"{d}, {np.absolute(d).sum()}")
+        d = np.diff(np.array(d)) / args.dt
     # print(x)
     # print(y)
     # print(t)
@@ -501,18 +520,18 @@ if __name__ == "__main__":
 
     # --- decompress ---
     points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_x]))
-    ans_x = [[poly(res_x[j]["coefficients"].flatten(), i * args.dt) for j in range(0, len(points) - 1)] for i in range(points[j], points[j + 1]) ]
+    ans_x = [[poly(res_x[j]["coefficients"].flatten(), i * args.d_dt)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]
     points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_y]))
-    ans_y = [[poly(res_y[j]["coefficients"].flatten(), i * args.dt) for j in range(0, len(points) - 1)] for i in range(points[j], points[j + 1]) ]
+    ans_y = [[poly(res_y[j]["coefficients"].flatten(), i * args.d_dt)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]
     points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_z]))
-    ans_x = [[poly(res_z[j]["coefficients"].flatten(), i * args.dt) for j in range(0, len(points) - 1)] for i in range(points[j], points[j + 1]) ]
+    ans_z = [[poly(res_z[j]["coefficients"].flatten(), i * args.d_dt)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]
 
 
     print("----- original points -----")
     print((t, x, y, z))
 
     # ans_x = sum([d["ans"] for d in res_x], [])
-    start_point_x = np.array([0] + ans_x
+    start_point_x = np.array([0] + [len(d["ans"]) for d in res_x])
     start_point_x = list(np.cumsum(start_point_x))
     # print(start_point_x)
     start_time_x = [t[d] for d in start_point_x[:-1]]
@@ -520,7 +539,7 @@ if __name__ == "__main__":
     # print(start_time_x)
     # print(start_point_x)
 
-    ans_y = sum([d["ans"] for d in res_y], [])
+    # ans_y = sum([d["ans"] for d in res_y], [])
     start_point_y = np.array([0] + [len(d["ans"]) for d in res_y])
     start_point_y = list(np.cumsum(start_point_y))
     # print(start_point_y)
@@ -566,7 +585,8 @@ if __name__ == "__main__":
     plt.ylabel("y (m)")
     fig.savefig(f"path_img/{file_name}_y.pdf", transparent=True)
 
-    etsi_x, etsi_y, etsi_t = car.path_filterd_by_ETSI()
+    # print(min_dt)
+    # etsi_x, etsi_y, etsi_t = x, y, t
 
     print("----- prev 1 points -----")
     # ----- previous 1 -----
@@ -586,15 +606,17 @@ if __name__ == "__main__":
     # f = open('mcm_bits.dat', 'w')
     # f.write(bits)
     # f.close()
-
     print("----- prev 2 points -----")
 
     # print(K)
+    # K = 8
     # K = 16
+    # K = 32
+    # K = 64
     # K = 16 * 16
     # K = 16 * 128
-    # K = 16 * 256
-    K = 2**6
+    K = 16 * 256
+    # K = 2**6
     K = int(math.log2(K))
     # print(len(bits))
     # symbols = "".join([str(int(bits[K * i: K * (i + 1)], 2)) for i in range(0, int(len(bits) / K))])
@@ -611,7 +633,9 @@ if __name__ == "__main__":
     size = 0
     sym2bit = {}
     overhead_bit = 0
-    max_simbit = max([math.log2(len(i.code)) + 1 for i in result])
+    # max_simbit = max([math.log2(len(i.code)) + 1 for i in result])
+    max_simbit = max([len(i.code) for i in result])
+    # print([i.code for i in result])
     overhead_bit = (K + max_simbit) * len(result)
     for i in result:
         # print(f"Character-- {i.original}:: Code-- {i.code} :: Probability-- {i.probability}")
@@ -638,7 +662,8 @@ if __name__ == "__main__":
     size = 0
     sym2bit = {}
     # max_simbit = max([len(i.code) for i in result])
-    max_simbit = max([math.log2(len(i.code)) + 1 for i in result])
+    # max_simbit = max([math.log2(len(i.code)) + 1 for i in result])
+    max_simbit = max([len(i.code) for i in result])
     overhead_bit = (K + max_simbit) * len(list(result[:]))
 
     for i in result:
@@ -654,6 +679,19 @@ if __name__ == "__main__":
     print(len(compressed_data) / 8)
     print(f"{len(compressed_data) / 8}, {overhead_bit / 8.0}")
     # print(compressed_data)
+
+    print("----- prev 4 google-polyline -----")
+    trajectory = [(x[i], y[i], z[i]) for i in range(0, len(x))]
+    # trajectory = [(etsi_x[i], etsi_y[i], 0) for i in range(0, len(etsi_x))]
+    print(trajectory)
+    comp = PolylineCodec()
+    start_time = time.perf_counter()
+    sig = comp.encode(trajectory, 2)
+    print(time.perf_counter() - start_time)
+    print(sig)
+    print(len(sig))
+    deco = comp.decode(sig, 2)
+    print(deco)
 
     print("----- proposed -----")
     dim_dict = {

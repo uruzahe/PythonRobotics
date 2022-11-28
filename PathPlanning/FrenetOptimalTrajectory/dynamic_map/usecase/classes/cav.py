@@ -211,7 +211,7 @@ class CAV:
                     following_vehs = [ob]
 
         for acc_veh in following_vehs:
-            ts, td = self.path_planner.sd_from_position(acc_veh.position)
+            # print(f"acc_position: {acc_veh.position}")
 
             al = math.dist((0, 0, 0), tuple(acc_veh.accel))
             vl = math.dist((0, 0, 0), tuple(acc_veh.speed))
@@ -219,11 +219,17 @@ class CAV:
 
             # ta = ACC_accel(acc_veh.length, al, vl, pl, c_speed, waypoints[0] + tuple([0]), max_accel)
 
-            for dT in np.arange(10, 11, 1):
-                if ts is None:
+            dT = 10
+            for dT in np.arange(5, 10, 5):
+                new_ts, td = self.path_planner.sd_from_position(
+                    np.array(acc_veh.position) + np.array(acc_veh.speed) * dT + np.array(acc_veh.accel) * (dT**2) / 2
+                )
+                if new_ts is None:
                     continue
 
-                for new_ts in np.linspace(ts, ts + vl * dT + al * (dT**2) /2 - ACC_l(c_speed, acc_veh.length), 10):
+                for vl in np.arange(0, max_speed, 5):
+                # new_ts = ts + vl * dT + al * (dT**2) /2 - max([ACC_l(c_speed, acc_veh.length), acc_veh.length]) - acc_veh.length
+                # for new_ts in np.linspace(ts, ts + vl * dT + al * (dT**2) /2 - ACC_l(c_speed, acc_veh.length) - acc_veh.length, 5):
                     # print(f"----- follow id: {acc_veh.id}, ts: {ts}, speed: {vl}, accel: {al} -----")
                     # new_ts = ts + vl * dT + al * (dT**2) /2 - ACC_l(c_speed, acc_veh.length)
                     # new_ts = ts + vl * dT + al * (dT**2) /2 - 100
@@ -235,13 +241,30 @@ class CAV:
                     new_path = self.path_planner.frenet_path(
                         dT,
                         td,
-                        new_ts,
+                        new_ts - max([ACC_l(vl, acc_veh.length), acc_veh.length]) - acc_veh.length,
                         vl,
-                        al
+                        0
                     )
 
                     fplist = fplist + self.fund_check_path([new_path], now, max_speed, max_accel, max_curv)
 
+            """
+            dT = 10
+            new_ts = ts + vl * dT + al * (dT**2) /2 - ACC_l(c_speed, acc_veh.length) - acc_veh.length
+
+            if ts is None:
+                continue
+
+            new_path = self.path_planner.frenet_path(
+                dT,
+                td,
+                new_ts,
+                vl,
+                al
+            )
+            """
+
+            fplist = fplist + self.fund_check_path([new_path], now, max_speed, max_accel, max_curv)
 
         return fplist
 
@@ -255,19 +278,21 @@ class CAV:
         tv = max_speed
         ta = 0
 
+        tt = 10
         # print(f"dT: {dT}")
         for td in np.linspace(road_width_list[1], road_width_list[0], max([1, int(road_width_list[0] - road_width_list[1])])):
-            for tt in np.linspace(dT, 10, int(10 / dT)):
-                print(f"----- id: {self.id}, free flow: tt: {tt}, speed: {tv}, accel: {ta}, dT: {dT} -----")
-                new_path = self.path_planner.frenet_path(
-                    tt,
-                    td,
-                    None,
-                    tv,
-                    ta
-                )
+            # for tt in np.linspace(dT, 10, int(10 / dT)):
+            # for tv in np.linspace(0, max_speed, 5):
+            print(f"----- id: {self.id}, free flow: tt: {tt}, speed: {tv}, accel: {ta}, dT: {dT} -----")
+            new_path = self.path_planner.frenet_path(
+                tt,
+                td,
+                None,
+                tv,
+                ta
+            )
 
-                fplist = fplist + self.fund_check_path([new_path], now, max_speed, max_accel, max_curv)
+            fplist = fplist + self.fund_check_path([new_path], now, max_speed, max_accel, max_curv)
 
         return fplist
 
@@ -283,6 +308,7 @@ class CAV:
             # for ta in [-max_accel, -max_accel / 2, 0, max_accel / 2, max_accel]:
             for tv in np.linspace(0, max_speed, 5):
                 ta = (tv - c_speed) / tt
+                ta = 0
                 # print(f"----- possible path: tt: {tt}, speed: {tv}, accel: {ta} -----")
                 new_path = self.path_planner.frenet_path(
                     tt,
@@ -345,18 +371,24 @@ class CAV:
         self.waypoints = waypoints
         print(f"id: {self.id}, waypoints: {waypoints}")
 
-        # """
+        # ----- free flow -----
+        # print("--- free flow")
+        # fplist = self.__free_flow_path(waypoints, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv)
+        # if self.__set_path(fplist, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv):
+        #     return True
+
+        # ----- ACC -----
+        # print("---- acc")
+        # fplist = self.__acc_path(waypoints, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv)
+        # if self.__set_path(fplist, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv):
+        #     return True
+
         # ----- free flow -----
         print("--- free flow")
         fplist = self.__free_flow_path(waypoints, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv)
         if self.__set_path(fplist, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv):
             return True
 
-        # ----- ACC -----
-        print("---- acc")
-        fplist = self.__acc_path(waypoints, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv)
-        if self.__set_path(fplist, c_speed, c_acc, now, road_width_list, max_speed, max_accel, max_curv):
-            return True
 
         # ----- possible path -----
         # print("--- possible path")

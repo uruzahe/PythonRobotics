@@ -56,6 +56,10 @@ class HuffmanNode:
         return [self.left.nodes(), self.right.nodes()]
 
 class BaseCompression:
+    def __init__(self):
+        self.result = None
+        # self.code2symbol = None
+
     def symbols(self, data, ascending=False):
         result = [Symbol(d).add_prob(data.count(d) / len(data)) for d in list(set(data))]
 
@@ -64,13 +68,39 @@ class BaseCompression:
     def compress(self):
         Exception("This method should be overrided.")
 
+    def decompress(self, bit_str, bit_length):
+        # if self.code2symbol == None:
+        code2symbol = {d.code: "{0:b}".format(int(d.symbol)).zfill(bit_length) for d in self.result}
+        # print(f"{bit_str}")
+        # print(code2symbol)
+
+        result = ""
+        while 0 < len(bit_str):
+            origin_bit_str = bit_str[:]
+
+            for i in range(1, len(bit_str) + 1):
+                if bit_str[0:i] in code2symbol.keys():
+                    result = result + code2symbol[bit_str[0:i]]
+                    # print(f"{bit_str[0:i]}, {code2symbol[bit_str[0:i]]}")
+                    bit_str = bit_str[i:]
+                    # print(bit_str)
+                    break
+
+                else:
+                    continue
+
+            assert(bit_str != origin_bit_str)
+        return result
+
 class ShannonFennonCompression(BaseCompression):
     def compress(self, data):
         symbols = self.symbols(data, ascending=True)
 
         self.encode(symbols)
+        self.result = symbols
 
-        return symbols
+        return self.result
+
 
     def split_index(self, symbols, index):
         diff_1 = math.fabs(sum([s.prob() for s in symbols[:index]]) - sum([s.prob() for s in symbols[index:]]))
@@ -122,7 +152,8 @@ class HuffmanCompression(BaseCompression):
         else:
             Exception("unknown type")
 
-        return list(deepflatten([symbols[0].nodes()]))
+        self.result = list(deepflatten([symbols[0].nodes()]))
+        return self.result
 
 
 if __name__ == '__main__':

@@ -3,6 +3,7 @@ import os, sys
 import numpy as np
 import math
 import warnings
+import random
 # import p# print
 
 from functools import lru_cache
@@ -100,6 +101,7 @@ if __name__ == "__main__":
         sumoBinary = "sumo-gui"
     traci.start(f"{sumoBinary} -c {args.sumo_cfg_file_path} --step-length {args.step} --seed {args.seed}".split(" "))
 
+    random.seed(args.seed)
     id2cavs = {}
     veh_ids = []
     while True:
@@ -216,9 +218,10 @@ if __name__ == "__main__":
                     dynamic_map.max_speed(traci.vehicle.getRoute(id)[traci.vehicle.getRouteIndex(id)], traci.vehicle.getLaneID(id), max_speed
                 )])
             ])
-            max_accel = max([math.fabs(accel), traci.vehicle.getAccel(id)])
+            # max_accel = max([math.fabs(accel), traci.vehicle.getAccel(id)])
+            max_accel = traci.vehicle.getAccel(id)
             # if p is None or (4 / (speed + 1)) / 10 <= progress:
-            if p is None or 0.1 <= progress:
+            if p is None or random.choice([0.05 * i for i in range(1, 11)]) <= progress:
                 mylogger.debug(f"time: {NOW}, id: {id}, waypoints: {optimal_waypoints(dynamic_map, edges, current_route_index, position)}")
                 cav.generate_new_path(
                     optimal_waypoints(dynamic_map, edges, current_route_index, position),
