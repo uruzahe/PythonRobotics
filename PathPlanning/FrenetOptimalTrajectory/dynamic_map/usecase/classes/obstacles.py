@@ -88,7 +88,7 @@ class Obstacle:
 
         else:
             dt = t - self.t
-            new_position = list(np.array(self.position) + np.array(self.speed) * dt + np.array(self.accel) * dt * dt)
+            new_position = list(np.array(self.position) + np.array(self.speed) * dt + np.array(self.accel) * dt * dt / 2.0)
 
             return [new_position]
 
@@ -100,7 +100,7 @@ class CarObstacle(Obstacle):
         self.heading = heading
         self.width = width
         self.length = length
-        self.path = None
+        self.path = path
         # assert(np.isnan(self.heading) is False)
         if path is not None:
             self.path = path

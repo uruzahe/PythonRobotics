@@ -23,6 +23,11 @@ class CAV:
         self.default_lane_mode = default_lane_mode
         self.default_tau = default_tau
 
+        self.edges = edges
+        self.speed = c_speed
+        self.accel = c_acc
+        self.road_width_list = road_width_list
+
     # def waypoints_by_edges(self, edges):
     #     return self.dynamic_map.waypoints_by_edges(edges)
 
@@ -57,6 +62,41 @@ class CAV:
                 return True
 
         return False
+
+    #def my_collision_check(self, cams, target_t):
+    #    self_carob = CarObstacle(
+    #        id=self.id,
+    #        t=target_t,
+    #        width=self.width,
+    #        length=self.length,
+    #        heading=self.heading,
+    #        path=self.path
+    #    )
+#
+    #    ob ={}
+    #    for sender_id , _ in cams.items():
+    #        if len(cams) == 1:
+    #            break
+    #        elif cams.get(sender_id).get(self.id) is None:
+    #            continue
+    #        else:
+    #            ob[sender_id] = CarObstacle(
+    #                id=sender_id,
+    #                t=target_t,
+    #                width=cams[sender_id][self.id].width,
+    #                length=cams[sender_id][self.id].length,
+    #                heading=cams[sender_id][self.id].angle,
+    #                path=None
+    #            )
+#
+    #    for ob_c in [v for v in ob.values()]:
+    #        if ob.get(ob_c) is None:
+    #            continue
+    #        elif any([self_carob.check_collision(ob_c, t) for t in np.arange(target_t, self.path.max_time(), 1)]):
+    #            print("collide.")
+    #            return True
+    #    
+    #    return False
 
     # def __s_is_invalid(fp):
     #     return any([math.isnan(s) or s < 0 for s in fp.s])
@@ -118,17 +158,17 @@ class CAV:
             #     continue
             if self.__s_is_invalid(fplist[i]):
                 print("invalid s.")
-                print(f"{sys._getframe().f_code.co_name}, fp.s: {fplist[i].s}")
+                #print(f"{sys._getframe().f_code.co_name}, fp.s: {fplist[i].s}")
                 continue
             elif self.__s_d_is_invalid(fplist[i], max_speed):  # Max speed check
                 print("speed over.")
-                print(f"{sys._getframe().f_code.co_name}, fp.s_d: {fplist[i].s_d}")
+                #print(f"{sys._getframe().f_code.co_name}, fp.s_d: {fplist[i].s_d}")
                 continue
             elif self.__s_dd_is_invalid(fplist[i], max_accel):
                 # print(max_accel)
                 # # print([a for a in fplist[i].s_dd])
                 print("accel over.")
-                print(f"{sys._getframe().f_code.co_name}, fp.s_dd: {fplist[i].s_dd}")
+                #print(f"{sys._getframe().f_code.co_name}, fp.s_dd: {fplist[i].s_dd}")
                 continue
             # elif any([abs(c) > max_curv for c in fplist[i].c]):  # Max curvature check
             #     # print("curve over.")
@@ -211,10 +251,10 @@ class CAV:
                 if ts is None:
                     continue
 
-                print(f"----- follow id: {acc_veh.id}, ts: {ts}, speed: {vl}, accel: {al} -----")
+                #print(f"----- follow id: {acc_veh.id}, ts: {ts}, speed: {vl}, accel: {al} -----")
                 new_ts = ts + vl * dT + al * (dT**2) /2 - ACC_l(c_speed, acc_veh.length)
                 tv = middle_val(vl + al * dT, 0, max_speed)
-                print(f"----- follow id: {acc_veh.id}, ts: {ts}, new_ts: {new_ts}, speed: {vl}, accel: {al} -----")
+                #print(f"----- follow id: {acc_veh.id}, ts: {ts}, new_ts: {new_ts}, speed: {vl}, accel: {al} -----")
                 new_path = self.path_planner.frenet_path(
                     dT,
                     td,
@@ -310,7 +350,7 @@ class CAV:
 
                 L = min([len(best_path.t), len(best_path.x), len(best_path.y)])
                 print("----- best path -----")
-                print([[now + best_path.t[j], best_path.x[j], best_path.y[j], 0] for j in range(0, L)])
+                #print([[now + best_path.t[j], best_path.x[j], best_path.y[j], 0] for j in range(0, L)])
                 self.path = Path([[now + best_path.t[j], best_path.x[j], best_path.y[j], 0] for j in range(0, L)])
 
                 return True

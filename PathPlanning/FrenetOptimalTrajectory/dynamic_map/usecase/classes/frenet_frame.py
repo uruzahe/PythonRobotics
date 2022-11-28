@@ -215,7 +215,6 @@ class FrenetOptimalTrajectry:
 
         path = self.frenet_optimal_planning(tt, td, ts, tv, ta, obstacles)
 
-
     def path(self, tt=None, ts=None, td=None, tv=None, ta=None, tt_limits=[0, 5, 10], td_limits=[0, 0], ta_limits=[-2, 2], obstacles=[]):
         tt_list = [tt] if tt is not None else np.linspace(tt_limits[0], tt_limits[1], int(tt_limits[3] - tt_limits[2]) + 1)
         ts_list = [ts]
