@@ -28,7 +28,10 @@ class CompressHandler:
         self.shannon_fennon = ShannonFennonCompression()
         self.huffman = HuffmanCompression()
 
-        self.google_polyline = D4PolylineCodec()
+        self.d4_google_polyline = D4PolylineCodec()
+        self.d3_google_polyline = D3PolylineCodec()
+
+        self.shannon_fennon_for_all = ShannonFennonCompression()
 
         pass
 
@@ -65,32 +68,60 @@ class CompressHandler:
             mcm.compressed_size = len(mcm.compressed_data) # 1 byte per 1 character
 
         elif method_name == "shannon":
-            return self.__comp_shannon_or_huffman(method_name, t, x, y, z)
+            return self.__comp_shannon_or_huffman(method_name, t, x, y, z, self.K)
 
         elif method_name == "huffman":
-            return self.__comp_shannon_or_huffman(method_name, t, x, y, z)
+            return self.__comp_shannon_or_huffman(method_name, t, x, y, z, self.K)
 
-        elif method_name == "google":
+        elif "google" in method_name:
             # trajectory = [(mcm.x[i], mcm.y[i], mcm.z[i]) for i in range(0, len(t))]
+            start_time = time.perf_counter()
+
+            if method_name == "d4google":
+                trajectory = [(mcm.x[i], mcm.y[i], mcm.z[i], mcm.t[i]) for i in range(0, len(t))]
+                mcm.compressed_data = self.d4_google_polyline.encode(trajectory, 2)
+
+            elif method_name == "d3google":
+                trajectory = [(mcm.x[i], mcm.y[i], mcm.z[i]) for i in range(0, len(t))]
+                mcm.compressed_data = self.d3_google_polyline.encode(trajectory, 2)
+
+            else:
+                raise NoMethodException(f"There are no method with the name {method_name}")
+
+            take_time = time.perf_counter() - start_time
+            mcm.compressed_size = len(mcm.compressed_data) # 1 byte per 1 character
+
+        elif method_name == "all-applied":
             trajectory = [(mcm.x[i], mcm.y[i], mcm.z[i], mcm.t[i]) for i in range(0, len(t))]
 
             start_time = time.perf_counter()
-            mcm.compressed_data = self.google_polyline.encode(trajectory, 2)
+            symbols = self.d4_google_polyline.encode(trajectory, 2).encode("ascii")
+            result = self.shannon_fennon_for_all.compress(symbols)
+
+            sym2bit = {}
+            for i in result:
+                sym2bit[i.symbol] = i.code
+
+            compressed_data = ""
+            for sym in symbols:
+                compressed_data = compressed_data + sym2bit[sym]
+
             take_time = time.perf_counter() - start_time
-            mcm.compressed_size = len(mcm.compressed_data) # 1 byte per 1 character
+            mcm.compressed_size = len(compressed_data) / 8
+            mcm.compressed_data = compressed_data
 
         else:
             raise NoMethodException(f"There are no method with the name {method_name}")
 
         return mcm, take_time, mcm.compressed_size
 
-    def __comp_shannon_or_huffman(self, method_name, t, x, y, z):
+    def __comp_shannon_or_huffman(self, method_name, t, x, y, z, K):
         mcm = MCM(x, y, z, t)
         bits = mcm.bit_str()
         # print(bits)
-        symbols = [str(int(bits[self.K * i: self.K * (i + 1)], 2)) for i in range(0, int(len(bits) / self.K))]
-        if self.K * int(len(bits) / self.K) < len(bits):
-            symbols = symbols + [str(int(bits[self.K * int(len(bits) / self.K):], 2))]
+        symbols = [str(int(bits[K * i: K * (i + 1)], 2)) for i in range(0, int(len(bits) / K))]
+        if K * int(len(bits) / K) < len(bits):
+            symbols = symbols + [str(int(bits[K * int(len(bits) / K):], 2))]
 
         start_time = time.perf_counter()
         if method_name == "shannon":
@@ -104,7 +135,7 @@ class CompressHandler:
 
         overhead_bit = 0
         max_simbit = max([len(i.code) for i in result])
-        overhead_bit = (self.K + max_simbit) * len(result)
+        overhead_bit = (K + max_simbit) * len(result)
 
         sym2bit = {}
         for i in result:
@@ -117,12 +148,12 @@ class CompressHandler:
 
         result = compressed_data
         take_time = time.perf_counter() - start_time
-        mcm.compressed_size = len(result) / 8
+        mcm.compressed_size = len(compressed_data) / 8
         mcm.compressed_data = compressed_data
 
         return mcm, take_time, mcm.compressed_size
 
-    def __decomp_shannon_or_huffman(self, method_name, result):
+    def __decomp_shannon_or_huffman(self, method_name, result, K):
         take_time = None
         ans = None
         ans_t, ans_x, ans_y, ans_z = None, None, None, None
@@ -130,10 +161,10 @@ class CompressHandler:
         start_time = time.perf_counter()
         # print(result)
         if method_name == "shannon":
-            ans = self.shannon_fennon.decompress(result.compressed_data, self.K)
+            ans = self.shannon_fennon.decompress(result.compressed_data, K)
 
         elif method_name == "huffman":
-            ans = self.huffman.decompress(result.compressed_data, self.K)
+            ans = self.huffman.decompress(result.compressed_data, K)
 
         # print(result)
         ans = result.bit2points(ans)
@@ -177,26 +208,56 @@ class CompressHandler:
             ans_z = [result.z0 + d for d in ans[3]]
 
         elif method_name == "shannon":
-            return self.__decomp_shannon_or_huffman(method_name, result)
+            return self.__decomp_shannon_or_huffman(method_name, result, self.K)
 
         elif method_name == "huffman":
-            return self.__decomp_shannon_or_huffman(method_name, result)
+            return self.__decomp_shannon_or_huffman(method_name, result, self.K)
 
-        elif method_name == "google":
+        elif "google" in method_name:
             start_time = time.perf_counter()
-            ans = self.google_polyline.decode(result.compressed_data, 2)
+
+            ans = None
+            if method_name == "d3google":
+                ans = self.d3_google_polyline.decode(result.compressed_data, 2)
+                ans_t = [result.t_d * i for i in range(0, len(ans))]
+
+            elif method_name == "d4google":
+                ans = self.d4_google_polyline.decode(result.compressed_data, 2)
+                ans_t = [d[3] for d in ans]
+
+            else:
+                raise NoMethodException(f"There are no method with the name {method_name}")
+
             take_time = time.perf_counter() - start_time
             # print(ans)
             ans_x = [d[0] for d in ans]
             ans_y = [d[1] for d in ans]
             ans_z = [d[2] for d in ans]
-            ans_t = [d[3] for d in ans]
 
             ans_x = [result.x0 + d for d in ans_x]
             ans_y = [result.y0 + d for d in ans_y]
             ans_z = [result.z0 + d for d in ans_z]
             ans_t = [result.t0 + d for d in ans_t]
             # ans_t = [result.t0 + i * result.t_d for i in range(0, len(ans_x))]
+        elif method_name == "all-applied":
+            start_time = time.perf_counter()
+
+            ans = self.shannon_fennon_for_all.decompress(result.compressed_data, 8)
+            google_polyline_sig = "".join([chr(int(ans[(8*i):(8*i + 8)], base=2)) for i in range(0, int(len(ans) / 8))])
+            ans = self.d4_google_polyline.decode(google_polyline_sig, 2)
+
+            take_time = time.perf_counter() - start_time
+
+            ans_t = [d[3] for d in ans]
+            ans_x = [d[0] for d in ans]
+            ans_y = [d[1] for d in ans]
+            ans_z = [d[2] for d in ans]
+
+            ans_x = [result.x0 + d for d in ans_x]
+            ans_y = [result.y0 + d for d in ans_y]
+            ans_z = [result.z0 + d for d in ans_z]
+            ans_t = [result.t0 + d for d in ans_t]
+
 
         else:
             raise NoMethodException(f"There are no method with the name {method_name}")
@@ -227,6 +288,7 @@ if __name__ == "__main__":
         mindim = 1,
         acceptance_error = 0.1,
         d_dt = d_dt,
+        symbol_length = 12,
     )
 
     print("\n----- Proposed Method -----")
@@ -258,9 +320,16 @@ if __name__ == "__main__":
     print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
     print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
 
-    print("\n----- Google Polyline -----")
-    result, comp_time, size   = compress_handler.compress("google", t, x, y, z)
-    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("google", result)
+    print("\n----- D3 Google Polyline -----")
+    result, comp_time, size   = compress_handler.compress("d3google", t, x, y, z)
+    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("d3google", result)
+    print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+
+    print("\n----- D4 Google Polyline -----")
+    result, comp_time, size   = compress_handler.compress("d4google", t, x, y, z)
+    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("d4google", result)
     print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
     print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
     print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
@@ -268,7 +337,10 @@ if __name__ == "__main__":
 
 
     print(f"\n\n\n ----- ETSI (ETSI-based size: {mcm.ETSI_size()}) ----- \n\n\n")
+    etsi_calc_overhead = time.perf_counter()
     x, y, z, t = mcm.ETSI_filter(x, y, z, t)
+    etsi_calc_overhead = time.perf_counter() - etsi_calc_overhead
+    print(etsi_calc_overhead)
 
     print("\n----- GZip Compression -----")
     result, comp_time,  size   = compress_handler.compress("gzip", t, x, y, z)
@@ -292,9 +364,16 @@ if __name__ == "__main__":
     print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
     print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
 
-    print("\n----- Google Polyline -----")
-    result, comp_time, size   = compress_handler.compress("google", t, x, y, z)
-    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("google", result)
+    print("\n----- D4 Google Polyline -----")
+    result, comp_time, size   = compress_handler.compress("d4google", t, x, y, z)
+    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("d4google", result)
+    print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+
+    print("\n----- All Applied -----")
+    result, comp_time, size   = compress_handler.compress("all-applied", t, x, y, z)
+    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("all-applied", result)
     print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
     print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
     print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
