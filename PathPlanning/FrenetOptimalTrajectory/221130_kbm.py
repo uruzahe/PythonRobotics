@@ -57,15 +57,13 @@ class MCM:
         self.compressed_data = None
         self.compressed_size = None
 
-        self.ITS_HEADER_OVERHEAD = 0
-
     def cossim(self, x, y):
         return np.dot(x,y)/(np.linalg.norm(x)*np.linalg.norm(y))
 
     def ETSI_size(self):
         _, _, _, _ = self.ETSI_filter(self.x, self.y, self.z, self.t)
 
-        return self.size_with_header_overhead(len(_) * self.size_1_point / 8.0)
+        return len(_) * self.size_1_point / 8.0
 
     def ETSI_filter(self, x, y, z, t):
         result = []
@@ -98,10 +96,7 @@ class MCM:
 
     def size(self):
         # return {ITS_PDU_HEADER (4 byte) + (size of t0, x0, y0, z0)}(20 Byte) + size_1_point * number of waypoints
-        return self.size_with_header_overhead(self.size_1_point * len(self.t) / 8.0)
-
-    def size_with_header_overhead(self, trajectory_container_size):
-        return trajectory_container_size + self.ITS_HEADER_OVERHEAD
+        return 20 + self.size_1_point * len(self.t) / 8.0
 
     def bit_str(self):
         result = ''
