@@ -3,6 +3,7 @@ import argparse
 import csv
 import math
 import time
+import json
 
 from kbm import Car, MCM
 from compress_handler import CompressHandler
@@ -44,7 +45,12 @@ if __name__ == "__main__":
 
     sumo_log_handler = SumoLogHandler(args.log_file_path)
 
+    all_result = []
     for ti in sumo_log_handler.times():
+        print(f"!!!!! {ti}")
+        if 20 < ti:
+            break
+
         for id in sumo_log_handler.ids_by_time(ti):
             t, x, y, z = sumo_log_handler.trajectory_by_id_and_time(id, ti)
 
@@ -71,6 +77,16 @@ if __name__ == "__main__":
             print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
             name = "prop"
+            all_result.append({
+                "name": name,
+                "id": id,
+                "time": ti,
+                f"size": size,
+                f"comp_time": comp_time,
+                f"decomp_time": decomp_time,
+                f"max_error": max(errors),
+                f"ave_error": sum(errors) / len(errors),
+            })
 
             print("\n----- GZip Compression -----")
             result, comp_time,  size   = compress_handler.compress("gzip", t, x, y, z)
@@ -80,7 +96,29 @@ if __name__ == "__main__":
             print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
             name = "gzip"
+            all_result.append({
+                "name": name,
+                "id": id,
+                "time": ti,
+                f"size": size,
+                f"comp_time": comp_time,
+                f"decomp_time": decomp_time,
+                f"max_error": max(errors),
+                f"ave_error": sum(errors) / len(errors),
+            })
 
+            # print("\n----- Shannon Fennon Compression -----")
+            # result, comp_time,  size   = compress_handler.compress("shannon", t, x, y, z)
+            # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("shannon", result)
+            # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+            # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+            # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+            # name = "shannon_fennon"
+            # all_result.update({
+            #     f"{name}_size": size,
+            #     f"{name}_comp_time": comp_time,
+            #     f"{name}_decomp_time": decomp_time,
+            # })
 
             print("\n----- Huffman Compression -----")
             result, comp_time,  size   = compress_handler.compress("huffman", t, x, y, z)
@@ -90,6 +128,16 @@ if __name__ == "__main__":
             print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
             name = "huffman"
+            all_result.append({
+                "name": name,
+                "id": id,
+                "time": ti,
+                f"size": size,
+                f"comp_time": comp_time,
+                f"decomp_time": decomp_time,
+                f"max_error": max(errors),
+                f"ave_error": sum(errors) / len(errors),
+            })
 
             # print("\n----- D3 Google Polyline -----")
             # result, comp_time, size   = compress_handler.compress("d3google", t, x, y, z)
@@ -106,6 +154,16 @@ if __name__ == "__main__":
             print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
             name = "google"
+            all_result.append({
+                "name": name,
+                "id": id,
+                "time": ti,
+                f"size": size,
+                f"comp_time": comp_time,
+                f"decomp_time": decomp_time,
+                f"max_error": max(errors),
+                f"ave_error": sum(errors) / len(errors),
+            })
 
             print(f"\n\n\n ----- ETSI (ETSI-based size: {mcm.ETSI_size()}) ----- \n\n\n")
             etsi_calc_overhead = time.perf_counter()
@@ -122,13 +180,13 @@ if __name__ == "__main__":
             # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
             #
-            print("\n----- Shannon Fennon Compression -----")
-            result, comp_time,  size   = compress_handler.compress("shannon", t, x, y, z)
-            ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("shannon", result)
-            print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
-            print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
-            print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
-            #
+            # print("\n----- Shannon Fennon Compression -----")
+            # result, comp_time,  size   = compress_handler.compress("shannon", t, x, y, z)
+            # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("shannon", result)
+            # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+            # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+            # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+
             # print("\n----- Huffman Compression -----")
             # result, comp_time,  size   = compress_handler.compress("huffman", t, x, y, z)
             # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("huffman", result)
@@ -136,12 +194,12 @@ if __name__ == "__main__":
             # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
             #
-            print("\n----- D4 Google Polyline -----")
-            result, comp_time, size   = compress_handler.compress("d4google", t, x, y, z)
-            ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("d4google", result)
-            print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
-            print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
-            print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+            # print("\n----- D4 Google Polyline -----")
+            # result, comp_time, size   = compress_handler.compress("d4google", t, x, y, z)
+            # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("d4google", result)
+            # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+            # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+            # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
 
             print("\n----- All Applied -----")
             result, comp_time, size   = compress_handler.compress("all-applied", t, x, y, z)
@@ -151,3 +209,16 @@ if __name__ == "__main__":
             print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
             name = "all"
+            all_result.append({
+                "name": name,
+                "id": id,
+                "time": ti,
+                f"size": size,
+                f"comp_time": comp_time,
+                f"decomp_time": decomp_time,
+                f"max_error": max(errors),
+                f"ave_error": sum(errors) / len(errors),
+            })
+
+            with open(args.log_file_path.split("/")[-1].split(".")[0] + "_result.json", "a") as f:
+                f.write(json.dumps(all_result) + "\n")

@@ -148,15 +148,14 @@ class MCM:
         # y = [self.y0 + struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.y_bit), 2)))[0] for bit in y_bits]
         # z = [self.z0 + struct.unpack('f', struct.pack('I', int(bit + '0' * (32 - self.z_bit), 2)))[0] for bit in z_bits]
 
-        # for bit in t_bits:
-        #     print(bit + '0' * (16 - self.t_bit))
-        #     print(struct.pack('h', int(bit + '0' * (16 - self.t_bit), 2)))
-        #     print(struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.t_bit), 2)))[0])
+        # for bit in x_bits:
+        #     print(bit + '0' * (16 - self.x_bit))
+        #     print(BitArray(bin=(bit + '0' * (16 - self.t_bit))).int)
 
-        t = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.t_bit), 2)))[0] for bit in t_bits]
-        x = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.x_bit), 2)))[0] for bit in x_bits]
-        y = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.y_bit), 2)))[0] for bit in y_bits]
-        z = [struct.unpack('h', struct.pack('h', int(bit + '0' * (16 - self.z_bit), 2)))[0] for bit in z_bits]
+        t = [struct.unpack('h', struct.pack('h', BitArray(bin=(bit + '0' * (16 - self.t_bit))).int ))[0] for bit in t_bits]
+        x = [struct.unpack('h', struct.pack('h', BitArray(bin=(bit + '0' * (16 - self.x_bit))).int ))[0] for bit in x_bits]
+        y = [struct.unpack('h', struct.pack('h', BitArray(bin=(bit + '0' * (16 - self.y_bit))).int ))[0] for bit in y_bits]
+        z = [struct.unpack('h', struct.pack('h', BitArray(bin=(bit + '0' * (16 - self.z_bit))).int ))[0] for bit in z_bits]
 
         # ----- convert short int to float -----
         t = [self.t0 + d / self.factor for d in t]
