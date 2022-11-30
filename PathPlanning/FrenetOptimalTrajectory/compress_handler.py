@@ -52,10 +52,15 @@ class CompressHandler:
             take_time = time.perf_counter() - start_time
             mcm.compressed_data = [res_x, res_y, res_z]
 
-            x_size = sum([(2 + 2 + 4 * d["efficient_dim"]) for d in res_x])
-            y_size = sum([(2 + 2 + 4 * d["efficient_dim"]) for d in res_y])
-            z_size = sum([(2 + 2 + 4 * d["efficient_dim"]) for d in res_z])
-            mcm.compressed_size = 14 + x_size + y_size + z_size
+            # x_size = sum([(2 + 2 + 4 * d["efficient_dim"]) for d in res_x])
+            # y_size = sum([(2 + 2 + 4 * d["efficient_dim"]) for d in res_y])
+            # z_size = sum([(2 + 2 + 4 * d["efficient_dim"]) for d in res_z])
+            # mcm.compressed_size = 14 + x_size + y_size + z_size
+
+            x_size = sum([(1 + 1 + 4 * d["efficient_dim"]) for d in res_x])
+            y_size = sum([(1 + 1 + 4 * d["efficient_dim"]) for d in res_y])
+            z_size = sum([(1 + 1 + 4 * d["efficient_dim"]) for d in res_z])
+            mcm.compressed_size = 1 + 1 + 1 + 1 + 1 + x_size + y_size + z_size
 
         elif method_name == "gzip":
             bits = mcm.bit_str()
@@ -169,10 +174,10 @@ class CompressHandler:
         # print(result)
         ans = result.bit2points(ans)
         take_time = time.perf_counter() - start_time
-        ans_t = [result.t0 + d for d in ans[0]]
-        ans_x = [result.x0 + d for d in ans[1]]
-        ans_y = [result.y0 + d for d in ans[2]]
-        ans_z = [result.z0 + d for d in ans[3]]
+        ans_t = [d for d in ans[0]]
+        ans_x = [d for d in ans[1]]
+        ans_y = [d for d in ans[2]]
+        ans_z = [d for d in ans[3]]
 
         return ans_t, ans_x, ans_y, ans_z, take_time
 
@@ -188,11 +193,11 @@ class CompressHandler:
             start_time = time.perf_counter()
 
             points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_x]))
-            ans_x = np.array([[result.x0 + poly(res_x[j]["coefficients"].flatten(), t_0 + i * t_d)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]).flatten().tolist()
+            ans_x = np.array([[result.x0 + poly(res_x[j]["coefficients"].flatten(), i * t_d)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]).flatten().tolist()
             points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_y]))
-            ans_y = np.array([[result.y0 + poly(res_y[j]["coefficients"].flatten(), t_0 + i * t_d)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]).flatten().tolist()
+            ans_y = np.array([[result.y0 + poly(res_y[j]["coefficients"].flatten(), i * t_d)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]).flatten().tolist()
             points = np.cumsum(np.array([0] + [d["efficient_point"] for d in res_z]))
-            ans_z = np.array([[result.z0 + poly(res_z[j]["coefficients"].flatten(), t_0 + i * t_d)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]).flatten().tolist()
+            ans_z = np.array([[result.z0 + poly(res_z[j]["coefficients"].flatten(), i * t_d)] for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1]) ]).flatten().tolist()
             ans_t = [t_0 + i * t_d for j in range(0, len(points) - 1) for i in range(points[j], points[j + 1])]
             take_time = time.perf_counter() - start_time
 
@@ -202,10 +207,10 @@ class CompressHandler:
             start_time = time.perf_counter()
             ans = result.bit2points(Bits(gzip.decompress(result.compressed_data)).bin)
             take_time = time.perf_counter() - start_time
-            ans_t = [result.t0 + d for d in ans[0]]
-            ans_x = [result.x0 + d for d in ans[1]]
-            ans_y = [result.y0 + d for d in ans[2]]
-            ans_z = [result.z0 + d for d in ans[3]]
+            ans_t = [d for d in ans[0]]
+            ans_x = [d for d in ans[1]]
+            ans_y = [d for d in ans[2]]
+            ans_z = [d for d in ans[3]]
 
         elif method_name == "shannon":
             return self.__decomp_shannon_or_huffman(method_name, result, self.K)
@@ -272,9 +277,10 @@ if __name__ == "__main__":
     a = 2
     theta = 30
     T = 10
+    t_offset = 20
     d_dt = 0.1
 
-    t = [d_t for d_t in np.arange(0, T, d_dt)]
+    t = [d_t for d_t in np.arange(t_offset, T + t_offset, d_dt)]
     x = [x_0 + (v * d_t + 1/2.0 * a * d_t * d_t) * cos(radians(theta)) for d_t in t]
     y = [y_0 + (v * d_t + 1/2.0 * a * d_t * d_t) * sin(radians(theta)) for d_t in t]
     z = [0 for d_t in t]
