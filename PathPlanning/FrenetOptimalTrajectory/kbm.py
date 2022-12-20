@@ -14,7 +14,7 @@ from bitstring import BitArray
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 
-from func import point2func, poly
+from func import point2func, poly, mydist
 from compression import ShannonFennonCompression, HuffmanCompression
 from google_polyline import PolylineCodec
 
@@ -477,7 +477,7 @@ class Car:
             # print(np.array([float(x_r[-1]), float(y_r[-1])]))
             # print(np.array(float(self.x_log[i]), float(self.y_log[i])))
             # print(np.array(float(x_r[-1]), float(y_r[-1])))
-            dd = math.dist([float(self.x_log[i]), float(self.y_log[i])], [float(x_r[-1]), float(y_r[-1])])
+            dd = mydist([float(self.x_log[i]), float(self.y_log[i])], [float(x_r[-1]), float(y_r[-1])])
 
             if 0.1 <= self.t_log[i] - t_r[-1]:
                 if 1.0 <= dt or 0.5 <= dv or 4 <= dh or 4 <= dd:

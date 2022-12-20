@@ -4,6 +4,9 @@ import math
 def poly(coefficients, x):
     return sum([coefficients[i] * math.pow(x, i) for i in range(0, len(coefficients))])
 
+def mydist(a, b):
+    return np.linalg.norm(np.array(a)-np.array(b))
+
 def point2func(t_l, x_l, y_l, dim=10):
     # print("----- t -----")
     # print(t_l)
