@@ -322,6 +322,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
     for dim in range(start_dim, max_dim + 1):
 
         # ----- fast version -----
+        is_exceed = False
         point = min([max([dim, int(efficiency * dim + 1)]), len(t)])
         coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
         if diff_x_max <= error_th:
@@ -333,7 +334,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
 
                     if error_th < new_diff_x_max:
                         # print("bbb")
-                        # diff_x_max = new_diff_x_max
+                        is_exceed = True
                         break
 
                     else:
@@ -344,7 +345,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
                 else:
                     continue
 
-        if point < len(t):
+        if point < len(t) or is_exceed:
             # print(f"--- {efficiency}, {(point - 1) / float(dim)}")
             if efficiency < (point - 1) / float(dim):
                 # print(f"### {point}, {len(t[(point):])}")
