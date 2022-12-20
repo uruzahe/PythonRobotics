@@ -145,6 +145,7 @@ if __name__ == "__main__":
     errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
     print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
     print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+    # print("aaa")
     name = "prop"
     all_result.update({
         f"{name}_size": size,
@@ -153,15 +154,19 @@ if __name__ == "__main__":
         f"{name}_max_error": max(errors),
         f"{name}_ave_error": sum(errors) / len(errors),
     })
+    errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
+    for i in range(0, len(errors)):
+        if 0.1 < errors[i]:
+            print(f"index: {i}, error: {errors[i]}")
 
-    comps = [complex(x[i], y[i]) for i in range(0, len(x))]
-    print(comps)
-    ls = [cmath.polar(comps[i])[0] for i in range(0, len(comps))]
-    thes = [cmath.polar(comps[i])[1] for i in range(0, len(comps))]
-    print(ls)
-    print(thes)
-    result, comp_time,  size    = compress_handler_for_prop.compress("proposed", t, ls, thes, z)
-    print(result.compressed_data)
+    # comps = [complex(x[i], y[i]) for i in range(0, len(x))]
+    # print(comps)
+    # ls = [cmath.polar(comps[i])[0] for i in range(0, len(comps))]
+    # thes = [cmath.polar(comps[i])[1] for i in range(0, len(comps))]
+    # print(ls)
+    # print(thes)
+    # result, comp_time,  size    = compress_handler_for_prop.compress("proposed", t, ls, thes, z)
+    # print(result.compressed_data)
     # print("\n----- Proposed Filtered -----")
     # result, comp_time,  size    = compress_handler_for_prop.compress("proposed-filter", t, x, y, z)
     # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler_for_prop.decompress("proposed-filter", result)
