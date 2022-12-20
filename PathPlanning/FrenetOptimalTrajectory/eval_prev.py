@@ -121,6 +121,7 @@ if __name__ == "__main__":
     )
 
     all_result = args.__dict__
+    # print(all_result)
     all_result.update({"normal_size": mcm.size()})
 
     print(f"\n\n\n ----- 0.1 sampling (normal size: {mcm.size()}) ----- \n\n\n")
@@ -156,8 +157,9 @@ if __name__ == "__main__":
     })
     errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
     for i in range(0, len(errors)):
-        if 0.1 < errors[i]:
-            print(f"index: {i}, error: {errors[i]}")
+        if 0.15 < errors[i]:
+            print(f"index: {i}, error: {errors[i]}, {(x[i], ans_x[i], math.fabs(x[i] - ans_x[i]))}, {(y[i], ans_y[i], math.fabs(y[i] - ans_y[i]))}, {(z[i], ans_z[i])}")
+            # raise Exception
 
     # comps = [complex(x[i], y[i]) for i in range(0, len(x))]
     # print(comps)
@@ -373,6 +375,7 @@ if __name__ == "__main__":
         f"{name}_ave_error": sum(errors) / len(errors),
     })
 
+    # print(all_result)
     # all_result.update({"file_name": file_name})
 
     with open(args.result_path, "a") as f:

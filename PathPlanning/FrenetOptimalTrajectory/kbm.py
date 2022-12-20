@@ -317,7 +317,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
         "coefficients": [],
         "ans": []
     }
-
+    # print(f"------ num: {len(t)} ------")
     assert(start_dim < max_dim + 1)
     for dim in range(start_dim, max_dim + 1):
 
@@ -327,7 +327,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
         coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
         if diff_x_max <= error_th:
             for point in range(max([dim, int(efficiency * dim + 1)]), len(t) + 1):
-                # print(f"{dim}, {point}: {math.fabs(x[point-1] - poly(coef, t[point-1]))}")
+                # print(f"{dim}, {point}: {math.fabs(x[point-1] - poly(coef, t[point-1]))}, {diff_x_max}")
                 if error_th < math.fabs(x[point-1] - poly(coef, t[point-1])):
                     # print("aaa")
                     new_coef, new_diff_x_max, new_ans_x = point2func(t[:point], x[:point], dim)
@@ -338,17 +338,22 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
                         break
 
                     else:
-                        coef, diff_max, ans_x = new_coef, new_diff_x_max, new_ans_x
+                        coef, diff_x_max, ans_x = new_coef, new_diff_x_max, new_ans_x
                         # print("ccc")
                         continue
 
                 else:
                     continue
 
+        else:
+            continue
+
         if point < len(t) or is_exceed:
-            # print(f"--- {efficiency}, {(point - 1) / float(dim)}")
+            # print(f"--- dim: {dim}, {efficiency}, {(point - 1) / float(dim)}")
             if efficiency < (point - 1) / float(dim):
                 # print(f"### {point}, {len(t[(point):])}")
+                # for i in range(0, point - 1):
+                #     print(f"t: {t[i]}, x: {x[i]}, v: {poly(coef, t[i])}, diff: {math.fabs(x[i] - poly(coef, t[i]))}")
                 # t_coef, t_diff_x_max, t_ans_x = point2func(t[:point - 1], x[:point - 1], dim)
                 # print(f"over error: {dim}, {point - 1}, {t_diff_x_max}")
 
@@ -368,10 +373,12 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
                 continue
 
         elif point == len(t):
-            # print(f"--- {efficiency}, {(point) / float(dim)}")
+            # print(f"--- dim: {dim}, {efficiency}, {(point) / float(dim)}")
             if efficiency < (point) / float(dim):
                 # coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
                 # print(f"### {point}, {len(t[(point):])}")
+                # for i in range(0, point):
+                #     print(f"t: {t[i]}, x: {x[i]}, v: {poly(coef, t[i])}, diff: {math.fabs(x[i] - poly(coef, t[i]))}")
                 # coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
                 # print(f"last: {dim}, {point}, {diff_x_max}")
                 efficiency = point / float(dim)
@@ -394,67 +401,69 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
             # print(len(t))
             raise Exception("unexpected state.")
 
+        """
         # ----- slow version -----
-        # for point in range(max([dim, int(efficiency * dim + 1)]), len(t) + 1):
-        #     # print(t)
-        #     # st = time.perf_counter()
-        #     coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
-        #     # total_time += time.perf_counter() - st
-        #     # print(total_time)
-        #
-        #     # print(f"middle: {point}, {len(t)}, {point == len(t)}")
-        #
-        #     if error_th < diff_x_max:
-        #         # print(f"{efficiency}, {(point - 1) / float(dim)}")
-        #         if efficiency < (point - 1) / float(dim):
-        #             # print(f"{point}, {len(t[(point):])}")
-        #             t_coef, t_diff_x_max, t_ans_x = point2func(t[:point - 1], x[:point - 1], dim)
-        #             # print(f"over error: {dim}, {point - 1}, {t_diff_x_max}")
-        #
-        #             efficiency = (point - 1) / float(dim)
-        #             result["efficient_point"] = point - 1
-        #             result["efficient_dim"] = dim
-        #             result["coefficients"] = t_coef
-        #             result["ans"] = t_ans_x
-        #             result["diff_max"] = t_diff_x_max
-        #             result["error_th"] = error_th
-        #             result["type"] = "less error"
-        #
-        #             assert(len(t_ans_x) == (point - 1))
-        #             break
-        #
-        #         else:
-        #             break
-        #
-        #     elif point == len(t):
-        #         # print(f"{efficiency}, {(point) / float(dim)}")
-        #         if efficiency < (point) / float(dim):
-        #             # print(f"{point}, {len(t[(point):])}")
-        #             # coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
-        #             # print(f"last: {dim}, {point}, {diff_x_max}")
-        #             efficiency = point / float(dim)
-        #             result["efficient_point"] = point
-        #             result["efficient_dim"] = dim
-        #             result["coefficients"] = coef
-        #             result["ans"] = ans_x
-        #             result["diff_max"] = diff_x_max
-        #             result["error_th"] = error_th
-        #             result["type"] = "last"
-        #
-        #             assert(len(ans_x) == (point))
-        #             break
-        #
-        #         else:
-        #             break
-        #
-        #
-        #     elif diff_x_max <= error_th:
-        #         # t_coef, t_diff_x_max, t_ans_x = coef, diff_x_max, ans_x
-        #         # print(f"less error: {dim}, {point}, {diff_x_max}")
-        #         continue
-        #
-        #     else:
-        #         raise Exception("unexpected state.")
+        for point in range(max([dim, int(efficiency * dim + 1)]), len(t) + 1):
+            # print(t)
+            # st = time.perf_counter()
+            coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
+            # total_time += time.perf_counter() - st
+            # print(total_time)
+
+            # print(f"middle: {point}, {len(t)}, {point == len(t)}")
+
+            if error_th < diff_x_max:
+                # print(f"{efficiency}, {(point - 1) / float(dim)}")
+                if efficiency < (point - 1) / float(dim):
+                    # print(f"{point}, {len(t[(point):])}")
+                    t_coef, t_diff_x_max, t_ans_x = point2func(t[:point - 1], x[:point - 1], dim)
+                    # print(f"over error: {dim}, {point - 1}, {t_diff_x_max}")
+
+                    efficiency = (point - 1) / float(dim)
+                    result["efficient_point"] = point - 1
+                    result["efficient_dim"] = dim
+                    result["coefficients"] = t_coef
+                    result["ans"] = t_ans_x
+                    result["diff_max"] = t_diff_x_max
+                    result["error_th"] = error_th
+                    result["type"] = "less error"
+
+                    assert(len(t_ans_x) == (point - 1))
+                    break
+
+                else:
+                    break
+
+            elif point == len(t):
+                # print(f"{efficiency}, {(point) / float(dim)}")
+                if efficiency < (point) / float(dim):
+                    # print(f"{point}, {len(t[(point):])}")
+                    # coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
+                    # print(f"last: {dim}, {point}, {diff_x_max}")
+                    efficiency = point / float(dim)
+                    result["efficient_point"] = point
+                    result["efficient_dim"] = dim
+                    result["coefficients"] = coef
+                    result["ans"] = ans_x
+                    result["diff_max"] = diff_x_max
+                    result["error_th"] = error_th
+                    result["type"] = "last"
+
+                    assert(len(ans_x) == (point))
+                    break
+
+                else:
+                    break
+
+
+            elif diff_x_max <= error_th:
+                # t_coef, t_diff_x_max, t_ans_x = coef, diff_x_max, ans_x
+                # print(f"less error: {dim}, {point}, {diff_x_max}")
+                continue
+
+            else:
+                raise Exception("unexpected state.")
+        """
 
     if result["efficient_point"] <= 0:
         # print(result)
