@@ -20,6 +20,143 @@ from google_polyline import PolylineCodec
 
 plt.rcParams["font.size"] = 18
 
+class ProposedHandler:
+    def __init__(self):
+        self.offset = 10
+
+    def element2bit(self, t_interval, error_th, dtc_x, dtc_y, dtc_z):
+        result = ""
+
+        # print(f"{t_interval}, {error_th}, {dtc_x}, {dtc_y}, {dtc_z}")
+        # print(t_interval)
+        # print(f"{int( t_interval * self.offset):08b}")
+        # result += struct.pack('<h', int( t_interval * self.offset))
+        # result += struct.pack('<h', int( error_th * self.offset))
+        # result += struct.pack('<h', int( len(dtc_x) * self.offset))
+        # result += struct.pack('<h', int( len(dtc_y) * self.offset))
+        # result += struct.pack('<h', int( len(dtc_z) * self.offset))
+
+        # result += f"{int( t_interval * self.offset):08b}"
+        # print(result)
+        # result += f"{int( error_th * self.offset):08b}"
+        # print(result)
+        # result += f"{int( len(dtc_x) * self.offset):08b}"
+        # print(result)
+        # result += f"{int( len(dtc_y) * self.offset):08b}"
+        # print(result)
+        # result += f"{int( len(dtc_z) * self.offset):08b}"
+
+        # print("".join([f"{x:08b}" for x in struct.pack('<h', int( t_interval * self.offset))[::-1]])[8:16])
+        result += "".join([f"{x:08b}" for x in struct.pack('<h', int( t_interval * self.offset))[::-1]])[8:16]
+        # print(result)
+        result += "".join([f"{x:08b}" for x in struct.pack('<h', int( error_th * self.offset))[::-1]])[8:16]
+        # print(result)
+        result += "".join([f"{x:08b}" for x in struct.pack('<h', int( len(dtc_x) * self.offset))[::-1]])[8:16]
+        # print(result)
+        result += "".join([f"{x:08b}" for x in struct.pack('<h', int( len(dtc_y) * self.offset))[::-1]])[8:16]
+        # print(result)
+        result += "".join([f"{x:08b}" for x in struct.pack('<h', int( len(dtc_z) * self.offset))[::-1]])[8:16]
+        # print(result)
+
+        for dtc in [dtc_x, dtc_y, dtc_z]:
+            for elm in dtc:
+                # print("".join([f"{x:08b}" for x in struct.pack('<h', int(elm[0]))[::-1]]))
+                result += "".join([f"{x:08b}" for x in struct.pack('<h', int(elm[0]))[::-1]])[8:16]
+                # print(result)
+                result += "".join([f"{x:08b}" for x in struct.pack('<h', int(elm[1]))[::-1]])[8:16]
+                # print(result)
+
+                for coef in elm[2]:
+                    result += "".join([f"{x:08b}" for x in struct.pack('<f', coef)[::-1]])[0:32]
+                    # result += f"{struct.pack('<f', coef)}"
+                    # print(result)
+
+        return result
+
+    def bit2element(self, bits):
+        bit_str = bits[:]
+
+        # print(bit_str)
+        # print(BitArray(bin="0" * 8 + bit_str[0:8]).int)
+        t_interval = float(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[0:8]).int))[0] / self.offset)
+        error_th = float(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[8:16]).int))[0] / self.offset)
+        dtc_x_num = int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[16:24]).int))[0] / self.offset)
+        dtc_y_num = int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[24:32]).int))[0] / self.offset)
+        dtc_z_num = int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[32:40]).int))[0] / self.offset)
+
+        # t_interval = int(BitArray(bin="0" * 8 + bit_str[0:8]).int / self.offset)
+        # error_th = int(BitArray(bin="0" * 8 + bit_str[8:16]).int / self.offset)
+        # dtc_x_num = int(BitArray(bin="0" * 8 + bit_str[16:24]).int / self.offset)
+        # dtc_y_num = int(BitArray(bin="0" * 8 + bit_str[24:32]).int / self.offset)
+        # dtc_z_num = int(BitArray(bin="0" * 8 + bit_str[32:40]).int / self.offset)
+
+
+        dtc_x = []
+        dtc_y = []
+        dtc_z = []
+
+        bit_str = bit_str[40:]
+        # print(bit_str)
+        # print(bit_str[])
+        for i in range(0, dtc_x_num):
+            elm = []
+
+            # print(bit_str[0:8])
+            elm.append(int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[0:8]).int))[0]))
+            # print(elm)
+            elm.append(int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[8:16]).int))[0]))
+
+            coeffs = []
+            for j in range(0, elm[1]):
+                coeffs.append(struct.unpack('f', struct.pack('I', int(bit_str[(16 + 32 * j):(16 + 32 * (j + 1))], 2)))[0])
+
+            elm.append(np.array(coeffs))
+
+            dtc_x.append(elm)
+            bit_str = bit_str[(8 * 2 + 32 * len(coeffs))::]
+            # print(bit_str)
+
+        # print("!!!")
+        # print(bit_str)
+        for i in range(0, dtc_y_num):
+            elm = []
+
+            elm.append(int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[0:8]).int))[0]))
+            elm.append(int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[8:16]).int))[0]))
+
+            coeffs = []
+            for j in range(0, elm[1]):
+                coeffs.append(struct.unpack('f', struct.pack('I', int(bit_str[(16 + 32 * j):(16 + 32 * (j + 1))], 2)))[0])
+
+            elm.append(np.array(coeffs))
+
+            dtc_y.append(elm)
+            bit_str = bit_str[(8 * 2 + 32 * len(coeffs)):]
+            # print(bit_str)
+
+        # print("!!!")
+        # print(bit_str)
+        for i in range(0, dtc_z_num):
+            elm = []
+
+            elm.append(int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[0:8]).int))[0]))
+            elm.append(int(struct.unpack('h', struct.pack('h', BitArray(bin="0" * 8 + bit_str[8:16]).int))[0]))
+
+            # print(elm)
+            coeffs = []
+            for j in range(0, elm[1]):
+                coeffs.append(struct.unpack('f', struct.pack('I', int(bit_str[(16 + 32 * j):(16 + 32 * (j + 1))], 2)))[0])
+
+            elm.append(np.array(coeffs))
+
+            dtc_z.append(elm)
+            bit_str = bit_str[(8 * 2 + 32 * len(coeffs)):]
+            # print(bit_str)
+
+        # print("!!!")
+        # print(bit_str)
+        return t_interval, error_th, dtc_x, dtc_y, dtc_z
+
 class MCM:
     def __init__(self, x, y, z, t):
         assert(len(x) == len(y))
@@ -56,6 +193,7 @@ class MCM:
 
         self.compressed_data = None
         self.compressed_size = None
+        self.compressed_overhead = 0
 
         self.ITS_HEADER_OVERHEAD = 0
 
@@ -107,7 +245,7 @@ class MCM:
         result = ''
 
         for i in range(0, len(self.t)):
-            # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.t[i])[::-1]])[0:self.t_bit]
+            # result = result + "".join([f"{x:08b}" for x in struct.pack('<h', self.short_t[i])[::-1]])[0:self.t_bit]
             # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.x[i])[::-1]])[0:self.x_bit]
             # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.y[i])[::-1]])[0:self.y_bit]
             # result = result + "".join([f"{x:08b}" for x in struct.pack('<f', self.z[i])[::-1]])[0:self.z_bit]
@@ -182,7 +320,7 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
 
     assert(start_dim < max_dim + 1)
     for dim in range(start_dim, max_dim + 1):
-        for point in range(int(efficiency * dim + 1), len(t) + 1):
+        for point in range(max([dim, int(efficiency * dim + 1)]), len(t) + 1):
             # print(t)
             # st = time.perf_counter()
             coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)

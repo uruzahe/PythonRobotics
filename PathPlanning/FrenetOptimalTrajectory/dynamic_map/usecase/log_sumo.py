@@ -16,8 +16,8 @@ def log_file_path(sumo_cfg_file_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Dynamic Map.')
     parser.add_argument('-cfp', '--sumo_cfg_file_path', required=True)
-    parser.add_argument('-st', '--start_time', type=float, default=0)
-    parser.add_argument('-et', '--end_time', type=float, default=120)
+    parser.add_argument('-st', '--start_time', type=float, default=600)
+    parser.add_argument('-et', '--end_time', type=float, default=720)
     parser.add_argument('-maxs','--max_speed', type=int, default=60.0 * 1000.0 / 3600.0)
     parser.add_argument('-gui', action='store_true', default=False)
     parser.add_argument('--step', type=float, default=0.1)

@@ -1,5 +1,6 @@
 from math import cos, sin, tan
 from math import atan as arctan
+import cmath
 from numpy import linalg
 import numpy as np
 import random
@@ -7,8 +8,10 @@ import argparse
 import math
 import json
 import time
+import sys
 import struct
 import gzip
+import pprint
 from bitstring import BitArray
 
 import matplotlib.pyplot as plt
@@ -23,6 +26,9 @@ from compress_handler import CompressHandler
 
 def update_result(all_result, d):
     all_result.update(d)
+
+# def floor(val, dim):
+    # return math.floor(val * 10 ** dim) / 10 ** dim
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Kinematic Model')
@@ -97,12 +103,21 @@ if __name__ == "__main__":
     mcm = MCM(x, y, z, t)
     file_name = "_".join([f"{k}_{v}" for k, v in args.__dict__.items()])
 
+    compress_handler_for_prop = CompressHandler(
+        maxdim = args.maxdim,
+        mindim = args.mindim,
+        acceptance_error = args.error_th,
+        d_dt = args.d_dt,
+        symbol_length = int(math.log2(2**4)),
+        google_order = -math.log10(args.error_th)
+    )
     compress_handler = CompressHandler(
         maxdim = args.maxdim,
         mindim = args.mindim,
         acceptance_error = args.error_th,
-        d_dt = args.dt,
-        symbol_length = int(math.log2(4096)),
+        d_dt = args.d_dt,
+        symbol_length = int(math.log2(2**4)),
+        google_order = -math.log10(args.error_th)
     )
 
     all_result = args.__dict__
@@ -110,12 +125,25 @@ if __name__ == "__main__":
 
     print(f"\n\n\n ----- 0.1 sampling (normal size: {mcm.size()}) ----- \n\n\n")
 
+    diff_x = np.diff(np.array(x)).tolist()
+    diff_y = np.diff(np.array(y)).tolist()
+
+    vs = [math.sqrt(diff_x[i]**2 + diff_y[i]**2) / args.dt for i in range(0, len(diff_x))]
+    theta = [math.acos(diff_x[i] / (vs[i] * args.dt)) for i in range(0, len(vs))]
+    theta = [(diff_x[i] / (vs[i] * args.dt)) for i in range(0, len(vs))]
+
+    # print(vs)
+    # print(theta)
+    #
+    # x = vs
+    # y = theta
+    # z = [0] * len(vs)
+    # t = t[0:len(x)]
     print("\n----- Proposed Method -----")
-    result, comp_time,  size    = compress_handler.compress("proposed", t, x, y, z)
-    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("proposed", result)
+    result, comp_time,  size    = compress_handler_for_prop.compress("proposed", t, x, y, z)
+    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler_for_prop.decompress("proposed", result)
     errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
     print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
-    print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
     print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
     name = "prop"
     all_result.update({
@@ -125,6 +153,34 @@ if __name__ == "__main__":
         f"{name}_max_error": max(errors),
         f"{name}_ave_error": sum(errors) / len(errors),
     })
+
+    comps = [complex(x[i], y[i]) for i in range(0, len(x))]
+    print(comps)
+    ls = [cmath.polar(comps[i])[0] for i in range(0, len(comps))]
+    thes = [cmath.polar(comps[i])[1] for i in range(0, len(comps))]
+    print(ls)
+    print(thes)
+    result, comp_time,  size    = compress_handler_for_prop.compress("proposed", t, ls, thes, z)
+    print(result.compressed_data)
+    # print("\n----- Proposed Filtered -----")
+    # result, comp_time,  size    = compress_handler_for_prop.compress("proposed-filter", t, x, y, z)
+    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler_for_prop.decompress("proposed-filter", result)
+    # print(f"T: {t}\n\n X: {x}\n\n Y: {y}\n\n Z: {z}")
+    # print(ans_t)
+    # print(ans_x)
+    # print(ans_y)
+    # print(ans_z)
+    # errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
+    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+    # name = "prop-filter"
+    # all_result.update({
+    #     f"{name}_size": size,
+    #     f"{name}_comp_time": comp_time,
+    #     f"{name}_decomp_time": decomp_time,
+    #     f"{name}_max_error": max(errors),
+    #     f"{name}_ave_error": sum(errors) / len(errors),
+    # })
 
     print("\n----- GZip Compression -----")
     result, comp_time,  size   = compress_handler.compress("gzip", t, x, y, z)
@@ -170,6 +226,14 @@ if __name__ == "__main__":
         f"{name}_max_error": max(errors),
         f"{name}_ave_error": sum(errors) / len(errors),
     })
+    name = "huffman-without-overhead"
+    all_result.update({
+        f"{name}_size": size - result.compressed_overhead,
+        f"{name}_comp_time": comp_time,
+        f"{name}_decomp_time": decomp_time,
+        f"{name}_max_error": max(errors),
+        f"{name}_ave_error": sum(errors) / len(errors),
+    })
 
     # print("\n----- D3 Google Polyline -----")
     # result, comp_time, size   = compress_handler.compress("d3google", t, x, y, z)
@@ -194,45 +258,6 @@ if __name__ == "__main__":
         f"{name}_ave_error": sum(errors) / len(errors),
     })
 
-    print(f"\n\n\n ----- ETSI (ETSI-based size: {mcm.ETSI_size()}) ----- \n\n\n")
-    etsi_calc_overhead = time.perf_counter()
-    x, y, z, t = mcm.ETSI_filter(x, y, z, t)
-    etsi_calc_overhead = time.perf_counter() - etsi_calc_overhead
-    print(etsi_calc_overhead)
-    name = "esti"
-    all_result.update({
-        f"{name}_size": mcm.ETSI_size(),
-    })
-
-    # print("\n----- GZip Compression -----")
-    # result, comp_time,  size   = compress_handler.compress("gzip", t, x, y, z)
-    # # result, comp_time,  size   = compress_handler.compress("gzip", mcm.etsi_t, mcm.etsi_x, mcm.etsi_y, mcm.etsi_z)
-    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("gzip", result)
-    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
-    # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
-    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
-    #
-    print("\n----- Shannon Fennon Compression -----")
-    result, comp_time,  size   = compress_handler.compress("shannon", t, x, y, z)
-    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("shannon", result)
-    print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
-    print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
-    print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
-    #
-    # print("\n----- Huffman Compression -----")
-    # result, comp_time,  size   = compress_handler.compress("huffman", t, x, y, z)
-    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("huffman", result)
-    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
-    # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
-    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
-    #
-    print("\n----- D4 Google Polyline -----")
-    result, comp_time, size   = compress_handler.compress("d4google", t, x, y, z)
-    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("d4google", result)
-    print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
-    print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
-    print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
-
     print("\n----- All Applied -----")
     result, comp_time, size   = compress_handler.compress("all-applied", t, x, y, z)
     ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("all-applied", result)
@@ -243,6 +268,100 @@ if __name__ == "__main__":
     name = "all"
     all_result.update({
         f"{name}_size": size,
+        f"{name}_comp_time": comp_time,
+        f"{name}_decomp_time": decomp_time,
+        f"{name}_max_error": max(errors),
+        f"{name}_ave_error": sum(errors) / len(errors),
+    })
+    name = "all-without-overhead"
+    all_result.update({
+        f"{name}_size": size - result.compressed_overhead,
+        f"{name}_comp_time": comp_time,
+        f"{name}_decomp_time": decomp_time,
+        f"{name}_max_error": max(errors),
+        f"{name}_ave_error": sum(errors) / len(errors),
+    })
+
+    print(f"\n\n\n ----- ETSI (ETSI-based size: {mcm.ETSI_size()}) ----- \n\n\n")
+    etsi_calc_overhead = time.perf_counter()
+    x, y, z, t = mcm.ETSI_filter(x, y, z, t)
+    print(len(x))
+    # pprint.pprint((x, y, z, t))
+    etsi_calc_overhead = time.perf_counter() - etsi_calc_overhead
+    print(etsi_calc_overhead)
+    name = "esti"
+    all_result.update({
+        f"{name}_size": mcm.ETSI_size(),
+        f"{name}_comp_time": etsi_calc_overhead,
+        f"{name}_decomp_time": 0,
+        f"{name}_max_error": 0,
+        f"{name}_ave_error": 0,
+    })
+
+    # print("\n----- Proposed Method -----")
+    # result, comp_time,  size    = compress_handler.compress("proposed", t, x, y, z)
+    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("proposed", result)
+    # errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
+    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    # # pprint.pprint(result.compressed_data)
+    # # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+    # name = "prop"
+    # all_result.update({
+    #     f"{name}_size": size,
+    #     f"{name}_comp_time": comp_time,
+    #     f"{name}_decomp_time": decomp_time,
+    #     f"{name}_max_error": max(errors),
+    #     f"{name}_ave_error": sum(errors) / len(errors),
+    # })
+
+    # print("\n----- GZip Compression -----")
+    # result, comp_time,  size   = compress_handler.compress("gzip", t, x, y, z)
+    # # result, comp_time,  size   = compress_handler.compress("gzip", mcm.etsi_t, mcm.etsi_x, mcm.etsi_y, mcm.etsi_z)
+    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("gzip", result)
+    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+    #
+    # print("\n----- Shannon Fennon Compression -----")
+    # result, comp_time,  size   = compress_handler.compress("shannon", t, x, y, z)
+    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("shannon", result)
+    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+    #
+    # print("\n----- Huffman Compression -----")
+    # result, comp_time,  size   = compress_handler.compress("huffman", t, x, y, z)
+    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("huffman", result)
+    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+    #
+    # print("\n----- D4 Google Polyline -----")
+    # result, comp_time, size   = compress_handler.compress("d4google", t, x, y, z)
+    # ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("d4google", result)
+    # print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+
+    print("\n----- All Applied -----")
+    result, comp_time, size   = compress_handler.compress("all-applied", t, x, y, z)
+    ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("all-applied", result)
+    errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
+    print(f"size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
+    print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
+    print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
+    name = "all-etsi"
+    all_result.update({
+        f"{name}_size": size,
+        f"{name}_comp_time": comp_time,
+        f"{name}_decomp_time": decomp_time,
+        f"{name}_max_error": max(errors),
+        f"{name}_ave_error": sum(errors) / len(errors),
+    })
+    name = "all-etsi-without-overhead"
+    all_result.update({
+        f"{name}_size": size - result.compressed_overhead,
         f"{name}_comp_time": comp_time,
         f"{name}_decomp_time": decomp_time,
         f"{name}_max_error": max(errors),

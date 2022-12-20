@@ -3,3 +3,7 @@ path_img/*
 
 result/*
 !result/.gitkeep
+
+*.json
+
+dynamic_map/usecase/LuSTScenario/

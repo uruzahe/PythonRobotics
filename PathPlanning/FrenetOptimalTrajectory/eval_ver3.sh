@@ -1,3 +1,6 @@
+RESULT_PATH="./result_prev.json"
+cp /dev/null $RESULT_PATH
+
 for MDIM in "5" "10"
 do
   for VI in "15" "30"
@@ -12,7 +15,7 @@ do
           do
             for TI in "0" "45" "90"
             do
-              python3 eval_prev.py -ai $AI -vi $VI -rui $RUI -rv $RV --np $NP -ti $TI -maxdim $MDIM -rt -eth 0.1
+              python3 eval_prev.py -ai $AI -vi $VI -rui $RUI -rv $RV --np $NP -ti $TI -maxdim $MDIM -rt -eth 0.1 --result_path $RESULT_PATH
             done
           done
         done
