@@ -306,7 +306,6 @@ class MCM:
 # total_time = 0
 # def multi_container2(t, x, max_dim, error_th, start_dim=1):
 
-
 def multi_container(t, x, max_dim, error_th, start_dim=1):
     # global total_time
     efficiency = 0
@@ -324,9 +323,13 @@ def multi_container(t, x, max_dim, error_th, start_dim=1):
         # ----- fast version -----
         is_exceed = False
         point = min([max([dim, int(efficiency * dim + 1)]), len(t)])
+        if point / float(dim) <= efficiency:
+            continue
+
         coef, diff_x_max, ans_x = point2func(t[:point], x[:point], dim)
         if diff_x_max <= error_th:
-            for point in range(max([dim, int(efficiency * dim + 1)]), len(t) + 1):
+            # for point in range(max([dim, int(efficiency * dim + 1)]), len(t) + 1):
+            for point in range(point + 1, len(t) + 1):
                 # print(f"{dim}, {point}: {math.fabs(x[point-1] - poly(coef, t[point-1]))}, {diff_x_max}")
                 if error_th < math.fabs(x[point-1] - poly(coef, t[point-1])):
                     # print("aaa")
