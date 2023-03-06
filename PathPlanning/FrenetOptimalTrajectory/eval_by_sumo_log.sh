@@ -1,4 +1,5 @@
-foo=$1
-list=(${foo//./ })
-echo ${list[0]}.json
-python3 eval_by_sumo_log.py -lfp $1 | tee  ${list[0]}.json
+#!/bin/bash
+foo=$1;
+file=$(echo $foo | cut -d "." -f 1).json
+# echo $file
+python3 eval_by_sumo_log.py -lfp $1 | tee $file

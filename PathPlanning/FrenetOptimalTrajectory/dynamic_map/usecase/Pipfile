@@ -8,6 +8,9 @@ numpy = "*"
 matplotlib = "*"
 bitstring = "*"
 iteration-utilities = "*"
+pandas = "*"
+sklearn = "*"
+scikit-learn = "*"
 
 [dev-packages]
 

@@ -26,6 +26,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 # from mpl_toolkits.mplot3d import Axes3D
 
 def logistic(df, x_keys, y_keys):
+    print(y_keys)
     # print(f"all     data: {len(df)}")
     # df =
     # print(f"filterd data: {len(df)}")
@@ -114,6 +115,7 @@ if __name__ == "__main__":
     df = pd.DataFrame.from_dict(data)
     # df = pd.read_csv(sys.argv[1], sep=',', skipinitialspace=True)
     print(df.keys())
+    print("error_th" in list(df.keys()))
     print(df)
     print(f"acc:                        {set(df['a_init'])}")
     print(f"speed:                      {set(df['v_init'])}")
@@ -128,7 +130,7 @@ if __name__ == "__main__":
     pd.set_option("display.max_colwidth", 1000)
     print(df.loc[[df['prop_size'].idxmax()]])
     print("\n----- logistic -----")
-    xs_keys = ["a_init", "v_init", "rotate_update_interval", "np", "t_init", "rotate_value", "maxdim"]
+    xs_keys = ["a_init", "v_init", "rotate_update_interval", "np", "t_init", "rotate_value", "maxdim", "error_th"]
     print(xs_keys)
 
     logistic(deepcopy(df), xs_keys, ['normal_size'])
@@ -136,8 +138,10 @@ if __name__ == "__main__":
     logistic(deepcopy(df), xs_keys, ['gzip_size'])
     logistic(deepcopy(df), xs_keys, ['esti_size'])
     logistic(deepcopy(df), xs_keys, ['huffman_size'])
+    logistic(deepcopy(df), xs_keys, ['huffman-without-overhead_size'])
     logistic(deepcopy(df), xs_keys, ['google_size'])
-    logistic(deepcopy(df), xs_keys, ['all_size'])
+    logistic(deepcopy(df), xs_keys, ['all-etsi_size'])
+    logistic(deepcopy(df), xs_keys, ['all-etsi-without-overhead_size'])
 
     # データ準備
     prop_size = [d["prop_size"] for d in data]
@@ -156,23 +160,31 @@ if __name__ == "__main__":
 
     tmp = [1 - d["gzip_size"]  / d["normal_size"] for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="gzip", rwidth=10)
 
     tmp = [1 - d["esti_size"]  / d["normal_size"] for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="etsi", rwidth=10)
 
     tmp = [1 - d["huffman_size"]  / d["normal_size"] for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="huffman", rwidth=10)
+
+    tmp = [1 - d["huffman-without-overhead_size"]  / d["normal_size"] for d in data if d["np"] in NP]
+    print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="huffman-no-overhead", rwidth=10)
 
     tmp = [1 - d["google_size"]  / d["normal_size"] for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="google", rwidth=10)
 
-    tmp = [1 - d["all_size"]  / d["normal_size"] for d in data if d["np"] in NP]
+    tmp = [1 - d["all-etsi_size"]  / d["normal_size"] for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="all", rwidth=10)
+
+    tmp = [1 - d["all-etsi-without-overhead_size"]  / d["normal_size"] for d in data if d["np"] in NP]
+    print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="all-no-overhead", rwidth=10)
 
     plt.legend(loc="upper left", fontsize=13) # (5)凡例表示
     plt.show()
@@ -193,19 +205,19 @@ if __name__ == "__main__":
 
     tmp = [math.log10(d["gzip_comp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="gzip", rwidth=10)
 
     tmp = [math.log10(d["huffman_comp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="huffman", rwidth=10)
 
     tmp = [math.log10(d["google_comp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="google", rwidth=10)
 
-    tmp = [math.log10(d["all_comp_time"]) for d in data if d["np"] in NP]
+    tmp = [math.log10(d["all-etsi_comp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="all", rwidth=10)
 
     plt.legend(loc="upper left", fontsize=13) # (5)凡例表示
     plt.show()
@@ -224,19 +236,19 @@ if __name__ == "__main__":
 
     tmp = [math.log10(d["gzip_decomp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="gzip", rwidth=10)
 
     tmp = [math.log10(d["huffman_decomp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="huffman", rwidth=10)
 
     tmp = [math.log10(d["google_decomp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="google", rwidth=10)
 
-    tmp = [math.log10(d["all_decomp_time"]) for d in data if d["np"] in NP]
+    tmp = [math.log10(d["all-etsi_decomp_time"]) for d in data if d["np"] in NP]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="all", rwidth=10)
 
     plt.legend(loc="upper left", fontsize=13) # (5)凡例表示
     plt.show()
@@ -247,27 +259,28 @@ if __name__ == "__main__":
     logistic(deepcopy(df), xs_keys, ['google_max_error'])
     logistic(deepcopy(df), xs_keys, ['all_max_error'])
 
+    print("!!!!!")
     BINS = np.linspace(-20.0, 0, 100)
     tmp = [math.log10(d["prop_max_error"]) for d in data if d["np"] in NP and d["prop_max_error"] != 0]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
     plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
 
-    print([d["gzip_max_error"] for d in data if d["np"] in NP])
+    # print([d["gzip_max_error"] for d in data if d["np"] in NP])
     tmp = [math.log10(d["gzip_max_error"]) for d in data if d["np"] in NP and d["gzip_max_error"] != 0]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="gzip", rwidth=10)
 
     tmp = [math.log10(d["huffman_max_error"]) for d in data if d["np"] in NP and d["huffman_max_error"] != 0]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="huffman", rwidth=10)
 
     tmp = [math.log10(d["google_max_error"]) for d in data if d["np"] in NP and d["google_max_error"] != 0]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="google", rwidth=10)
 
-    tmp = [math.log10(d["all_max_error"]) for d in data if d["np"] in NP and d["all_max_error"] != 0]
+    tmp = [math.log10(d["all-etsi_max_error"]) for d in data if d["np"] in NP and d["all_max_error"] != 0]
     print(f"{min(tmp)}, {max(tmp)}, {np.percentile(tmp, [25, 50, 75])}")
-    plt.hist(tmp, alpha=0.5, bins=BINS, label="prop", rwidth=10)
+    plt.hist(tmp, alpha=0.5, bins=BINS, label="all", rwidth=10)
 
     plt.legend(loc="upper left", fontsize=13) # (5)凡例表示
     plt.show()

@@ -35,16 +35,19 @@ if __name__ == "__main__":
     sumoBinary = "sumo"
     if args.gui:
         sumoBinary = "sumo-gui"
-    traci.start(f"{sumoBinary} -c {args.sumo_cfg_file_path} --step-length {args.step} --seed {args.seed} -b {args.start_time} -e {args.end_time}".split(" "))
+    # traci.start(f"{sumoBinary} -c {args.sumo_cfg_file_path} --step-length {args.step} --seed {args.seed} -b {args.start_time} -e {args.end_time}".split(" "))
+    traci.start(f"{sumoBinary} -c {args.sumo_cfg_file_path} --step-length {args.step} --seed {args.seed}".split(" "))
 
     logs = []
     veh_ids = []
     while traci.simulation.getTime() <= args.end_time:
         traci.simulationStep()
-
         del_ids = traci.simulation.getArrivedIDList()
         add_ids = traci.simulation.getDepartedIDList()
         veh_ids = list((set(veh_ids) | set(add_ids)) - set(del_ids))
+
+        if traci.simulation.getTime() < args.start_time:
+            continue
 
         for veh_id in veh_ids:
             pos = traci.vehicle.getPosition(veh_id)
@@ -56,6 +59,7 @@ if __name__ == "__main__":
                 "pos_y": pos[1],
                 "pos_z": 0,
             })
+
 
     with open(log_file_path(args.sumo_cfg_file_path), 'w', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames = logs[0].keys())

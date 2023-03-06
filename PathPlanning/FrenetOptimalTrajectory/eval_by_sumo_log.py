@@ -16,17 +16,20 @@ class SumoLogHandler:
 
             self.id2data = {}
             for id in self.ids():
+                # print(id)
                 self.id2data[id] = [d for d in self.data if d["id"] == id]
                 self.id2data[id] = sorted(self.id2data[id], key=lambda d: float(d["time"]))
                 # print(self.id2data[id])
 
     def times(self):
         return sorted(set([float(d["time"]) for d in self.data]))
+        # return sorted(set([float(d["time"]) for d in self.data if 615 <= float(d["time"]) and float(d["time"]) <= 626]))
 
     def ids(self):
         return list(set([d["id"] for d in self.data]))
 
     def ids_by_time(self, t):
+        # print(list(set([d["id"] for d in self.data if float(d['time']) == t])))
         return list(set([d["id"] for d in self.data if float(d['time']) == t]))
 
     def trajectory_by_id_and_time(self, id, t, duration):
@@ -66,7 +69,8 @@ class SumoLogHandler:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Dynamic Map.')
     parser.add_argument('-lfp', '--log_file_path')
-    parser.add_argument('-dur', '--duration', type=float, default=20)
+    parser.add_argument('-dur', '--duration', type=float, default=10)
+    parser.add_argument('--error_th', type=float, default=0.01)
     args = parser.parse_args()
 
     sumo_log_handler = SumoLogHandler(args.log_file_path)
@@ -87,7 +91,7 @@ if __name__ == "__main__":
             compress_handler = CompressHandler(
                 maxdim = 10,
                 mindim = 1,
-                acceptance_error = 0.1,
+                acceptance_error = args.error_th,
                 d_dt = 0.1,
                 symbol_length = int(math.log2(2**4)),
             )
@@ -158,6 +162,17 @@ if __name__ == "__main__":
                 "id": id,
                 "time": ti,
                 f"size": size,
+                f"comp_time": comp_time,
+                f"decomp_time": decomp_time,
+                f"max_error": max(errors),
+                f"ave_error": sum(errors) / len(errors),
+            }))
+            name = "huffman-without-overhead"
+            print(json.dumps({
+                "name": name,
+                "id": id,
+                "time": ti,
+                f"size": size - result.compressed_overhead,
                 f"comp_time": comp_time,
                 f"decomp_time": decomp_time,
                 f"max_error": max(errors),
@@ -240,7 +255,7 @@ if __name__ == "__main__":
             result, comp_time, size   = compress_handler.compress("all-applied", t, x, y, z)
             ans_t, ans_x, ans_y, ans_z, decomp_time = compress_handler.decompress("all-applied", result)
             errors = [math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]
-            name = "all"
+            name = "all-etsi"
             # print(f"name: {name}, size: {size}, comp_time: {comp_time}, decomp_time: {decomp_time}\n result: {result.compressed_data}")
             # print(f"T: {ans_t}\n\n X: {ans_x}\n\n Y: {ans_y}\n\n Z: {ans_z}")
             # print(f"\nerror: {[math.sqrt((x[i] - ans_x[i])**2 + (y[i] - ans_y[i])**2 + (z[i] - ans_z[i])**2) for i in range(0, len(ans_t))]}")
@@ -249,6 +264,17 @@ if __name__ == "__main__":
                 "id": id,
                 "time": ti,
                 f"size": size,
+                f"comp_time": comp_time,
+                f"decomp_time": decomp_time,
+                f"max_error": max(errors),
+                f"ave_error": sum(errors) / len(errors),
+            }))
+            name = "all-etsi-without-overhead"
+            print(json.dumps({
+                "name": name,
+                "id": id,
+                "time": ti,
+                f"size": size - result.compressed_overhead,
                 f"comp_time": comp_time,
                 f"decomp_time": decomp_time,
                 f"max_error": max(errors),
